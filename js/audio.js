@@ -24,6 +24,13 @@ function initAudio() {
 
   // Tenta autoplay silencioso (funciona em alguns cenários como retorno de aba)
   audio.volume = 0.7;
+  audio.play().then(() => {
+    _audioAtivado = true;
+    btn.classList.add('playing');
+    if (pulso) pulso.classList.add('ativo');
+  }).catch(() => {
+    // Autoplay bloqueado pelo navegador
+  });
 
   // ── Primeiro clique em qualquer lugar inicia a música ──
   function primeiraInteracao() {
