@@ -94,7 +94,6 @@ function irSv4() {
 /* ════════════════════════════════════════
    VALIDAÇÕES
    ════════════════════════════════════════ */
-
 /**
  * Marca um campo como inválido, exibe toast e agenda remoção do erro.
  * @param {HTMLElement} el - O elemento de input.
