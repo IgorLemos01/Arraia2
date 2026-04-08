@@ -121,26 +121,30 @@
 @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
 
 /* ── RADIO BUTTONS ── */
-.radio-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
-.radio-btn {
+.radio-group { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+.radio-group .radio-btn {
   flex: 1; min-width: 120px;
   border: 2px solid rgba(255,255,255,.12);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: flex;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex !important;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 12px;
   cursor: pointer;
-  transition: all .2s;
-  font-size: .95rem;
-  font-weight: 700;
+  transition: all .25s;
+  font-size: 1rem;
+  font-weight: 800;
   color: rgba(255,255,255,.6);
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  margin-bottom: 0 !important;
 }
-.radio-btn:hover    { border-color: rgba(245,197,24,.4); color: #fff; }
-.radio-btn.selected { border-color: var(--amarelo); background: rgba(245,197,24,.1); color: #fff; }
-.radio-btn input    { display: none; }
+.radio-group .radio-btn:hover    { border-color: rgba(245,197,24,.4); color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.radio-group .radio-btn.selected { border-color: var(--amarelo); background: rgba(245,197,24,.1); color: #fff; box-shadow: 0 4px 12px rgba(245,197,24,.15); transform: translateY(-2px); }
+.radio-group .radio-btn input    { display: none; }
 .radio-dot {
-  width: 18px; height: 18px;
+  width: 20px; height: 20px;
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,.3);
   display: flex;
@@ -149,9 +153,9 @@
   flex-shrink: 0;
   transition: all .2s;
 }
-.radio-btn.selected .radio-dot         { border-color: var(--amarelo); background: var(--amarelo); }
-.radio-dot::after                      { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #fff; display: none; }
-.radio-btn.selected .radio-dot::after  { display: block; }
+.radio-group .radio-btn.selected .radio-dot { border-color: var(--amarelo); background: var(--amarelo); }
+.radio-dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff; display: none; }
+.radio-group .radio-btn.selected .radio-dot::after { display: block; }
 
 /* ── CONDITIONAL FIELD ── */
 .cond-field {
