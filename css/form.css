@@ -1,468 +1,465 @@
-/* ============================================================
-   FORMULÁRIO — Página 2 (inscrição + pagamento)
-   ============================================================ */
+/**
+ * form.js — Lógica completa do formulário de inscrição
+ * Arraiá da Paz 2026
+ *
+ * Responsabilidades:
+ *  - Controle de steps (etapas)
+ *  - Validações por etapa
+ *  - Seleção de comunidade e pagamento
+ *  - Cópia da chave Pix
+ *  - Envio via webhook (Google Apps Script)
+ *  - Exibição da tela de sucesso
+ *  - Reset completo do formulário
+ *  - Máscaras de CPF e Telefone
+ */
 
-/* ── FORM PAGE BACKGROUND ── */
-.form-page {
-  min-height: 100vh;
-  background: linear-gradient(160deg, #0f1c32 0%, #1a3a5c 50%, #0f1c32 100%);
-  padding: 130px 24px 60px;
-}
+/* ── Estado do formulário ── */
+let svAtual        = 1;
+let comSelecionada = null;
+let tipoIngresso   = null;  // 'individual' | 'mesa'
+let pagSelecionado = null;
 
-/* ── FORM CONTAINER ── */
-.form-container {
-  max-width: 620px;
-  margin: 0 auto;
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 28px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,.4);
-}
-.form-header {
-  background: linear-gradient(135deg, #0f1c32, #1a3a5c);
-  padding: 32px 36px 28px;
-  text-align: center;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-.form-header h1 {
-  font-family: var(--font-titulo);
-  font-size: 2rem;
-  color: var(--amarelo);
-  margin-bottom: 6px;
-}
-.form-header p { color: rgba(255,255,255,.6); font-size: .9rem; }
+/* ── Rate Limiting (anti-spam client-side) ── */
+const RL_KEY = 'arraia_submissoes';
 
-/* ── STEP INDICATORS ── */
-.steps-wrap { display: flex; padding: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
-.step-ind {
-  flex: 1;
-  padding: 16px 8px;
-  text-align: center;
-  font-size: .75rem;
-  font-weight: 800;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.3);
-  border-bottom: 3px solid transparent;
-  transition: all .3s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-.step-ind .snum {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: .8rem;
-  font-weight: 900;
-  transition: all .3s;
-}
-.step-ind.active { color: var(--laranja); border-bottom-color: var(--laranja); }
-.step-ind.active .snum { background: var(--laranja); color: #fff; }
-.step-ind.done  { color: var(--verde); }
-.step-ind.done .snum  { background: var(--verde); color: #fff; }
+/**
+ * Verifica se o usuário está dentro do limite de envios permitidos.
+ * @returns {boolean} true se pode enviar, false se bloqueado.
+ */
+function _rateLimitOk() {
+  const agora   = Date.now();
+  const raw     = localStorage.getItem(RL_KEY);
+  const registro = raw ? JSON.parse(raw) : { count: 0, inicio: agora };
 
-/* ── FORM BODY ── */
-.form-body { padding: 32px 36px; }
-@media (max-width: 500px) {
-  .form-body   { padding: 24px 20px; }
-  .form-header { padding: 28px 20px 24px; }
+  // Reseta a janela se já passou o tempo
+  if (agora - registro.inicio > CFG.JANELA_MS) {
+    localStorage.setItem(RL_KEY, JSON.stringify({ count: 0, inicio: agora }));
+    return true;
+  }
+
+  if (registro.count >= CFG.MAX_SUBMISSOES) return false;
+
+  registro.count++;
+  localStorage.setItem(RL_KEY, JSON.stringify(registro));
+  return true;
 }
 
-/* ── STEP VIEWS (animation) ── */
-.step-view { display: none; }
-.step-view.active { display: block; animation: fadeUp .3s ease; }
+/* ════════════════════════════════════════
+   STEPS
+   ════════════════════════════════════════ */
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/**
+ * Navega para um step específico do formulário.
+ * @param {number} n - Número do step destino (1, 2, 3 ou 4).
+ */
+function irSv(n) {
+  document.getElementById("sv" + svAtual).classList.remove("active");
+  document.getElementById("si" + svAtual).classList.remove("active");
 
-/* ── FIELD GROUPS ── */
-.fg { margin-bottom: 20px; }
-.fg label {
-  display: block;
-  font-size: .78rem;
-  font-weight: 800;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.55);
-  margin-bottom: 7px;
-}
-.fg input,
-.fg select {
-  width: 100%;
-  padding: 13px 16px;
-  background: rgba(255,255,255,.07);
-  border: 1.5px solid rgba(255,255,255,.12);
-  border-radius: 12px;
-  color: #fff;
-  font-family: var(--font-corpo);
-  font-size: .95rem;
-  outline: none;
-  transition: all .2s;
-}
-.fg input:focus,
-.fg select:focus {
-  border-color: var(--amarelo);
-  background: rgba(255,255,255,.1);
-  box-shadow: 0 0 0 4px rgba(245,197,24,.1);
-}
-.fg input::placeholder     { color: rgba(255,255,255,.25); }
-.fg select option          { background: #1a3a5c; color: #fff; }
-.fg input.err              { border-color: var(--laranja-escuro) !important; }
+  if (svAtual < n) {
+    document.getElementById("si" + svAtual).classList.add("done");
+  } else {
+    // Voltando: remove o “done” do step que está sendo reativado
+    document.getElementById("si" + n).classList.remove("done");
+  }
 
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+  svAtual = n;
 
-/* ── RADIO BUTTONS ── */
-.radio-group { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
-.radio-group .radio-btn {
-  flex: 1; min-width: 120px;
-  border: 2px solid rgba(255,255,255,.12);
-  border-radius: 14px;
-  padding: 16px 20px;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all .25s;
-  font-size: 1rem;
-  font-weight: 800;
-  color: rgba(255,255,255,.6);
-  text-transform: none !important;
-  letter-spacing: normal !important;
-  margin-bottom: 0 !important;
-}
-.radio-group .radio-btn:hover    { border-color: rgba(245,197,24,.4); color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
-.radio-group .radio-btn.selected { border-color: var(--amarelo); background: rgba(245,197,24,.1); color: #fff; box-shadow: 0 4px 12px rgba(245,197,24,.15); transform: translateY(-2px); }
-.radio-group .radio-btn input    { display: none; }
-.radio-dot {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all .2s;
-}
-.radio-group .radio-btn.selected .radio-dot { border-color: var(--amarelo); background: var(--amarelo); }
-.radio-dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff; display: none; }
-.radio-group .radio-btn.selected .radio-dot::after { display: block; }
-
-/* ── CONDITIONAL FIELD ── */
-.cond-field {
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition: max-height .35s ease, opacity .3s ease, margin .3s ease;
-  margin-bottom: 0;
-}
-.cond-field.show { max-height: 120px; opacity: 1; margin-bottom: 20px; }
-
-/* ── BUTTONS ── */
-.btn-primary {
-  width: 100%;
-  padding: 15px;
-  background: linear-gradient(135deg, var(--laranja), var(--laranja-escuro));
-  color: #fff;
-  font-family: var(--font-corpo);
-  font-weight: 900;
-  font-size: 1rem;
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all .25s;
-  box-shadow: 0 4px 15px rgba(230,126,34,.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn-primary:hover    { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(230,126,34,.4); }
-.btn-primary:active   { transform: translateY(1px); }
-.btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-.btn-ghost {
-  width: 100%;
-  padding: 13px;
-  margin-top: 10px;
-  background: transparent;
-  border: 1.5px solid rgba(255,255,255,.15);
-  color: rgba(255,255,255,.5);
-  font-family: var(--font-corpo);
-  font-weight: 700;
-  font-size: .9rem;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all .2s;
-}
-.btn-ghost:hover { border-color: rgba(255,255,255,.35); color: #fff; }
-
-/* ── PAGAMENTO CARDS ── */
-.pag-opcoes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-@media (max-width: 400px) { .pag-opcoes { grid-template-columns: 1fr; } }
-.pag-card {
-  border: 2px solid rgba(255,255,255,.12);
-  border-radius: 18px;
-  padding: 28px 16px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .25s;
-}
-.pag-card:hover        { transform: translateY(-3px); }
-.pag-card.selected     { border-width: 2px; }
-.pag-card .pag-ico     { font-size: 2.8rem; margin-bottom: 10px; display: block; }
-.pag-card h4           { font-size: 1.1rem; font-weight: 900; margin-bottom: 4px; }
-.pag-card p            { font-size: .8rem; color: rgba(255,255,255,.5); }
-#pixCard.selected      { border-color: var(--verde);  background: rgba(39,174,96,.1); }
-#cartaoCard.selected   { border-color: #5c7cfa;       background: rgba(92,124,250,.1); }
-
-.pag-detail      { display: none; animation: fadeUp .3s ease; }
-.pag-detail.show { display: block; }
-
-/* ── PIX BOX ── */
-.pix-box {
-  background: rgba(39,174,96,.1);
-  border: 1.5px solid rgba(39,174,96,.35);
-  border-radius: 16px;
-  padding: 24px;
-  text-align: center;
-}
-.pix-box h4 { color: var(--verde); font-size: 1rem; font-weight: 800; margin-bottom: 8px; }
-.pix-key-display {
-  background: rgba(0,0,0,.3);
-  border: 1px solid rgba(39,174,96,.3);
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-family: 'Caveat', cursive;
-  font-size: 1.25rem;
-  color: #fff;
-  word-break: break-all;
-  margin: 12px 0;
-}
-.btn-copy {
-  background: var(--verde);
-  color: #fff;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 50px;
-  font-family: var(--font-corpo);
-  font-weight: 800;
-  cursor: pointer;
-  font-size: .9rem;
-  transition: all .2s;
-}
-.btn-copy:hover { background: var(--verde-escuro); }
-.pix-obs  { color: rgba(255,255,255,.4); font-size: .78rem; margin-top: 10px; }
-
-/* ── SUCCESS VIEW ── */
-.success-view {
-  display: none;
-  text-align: center;
-  padding: 48px 32px;
-}
-.success-view.show { display: block; animation: fadeUp .4s ease; }
-.success-big {
-  font-size: 5rem;
-  margin-bottom: 20px;
-  display: block;
-  animation: bounceIn .6s ease;
-}
-@keyframes bounceIn {
-  0%   { transform: scale(0); }
-  60%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-.success-view h2 { font-family: var(--font-titulo); font-size: 2rem; color: var(--verde); margin-bottom: 14px; }
-.success-view p          { color: rgba(255,255,255,.65); line-height: 1.7; font-size: .95rem; }
-.success-view .nome-dest { color: var(--amarelo); font-weight: 900; }
-.success-view .email-dest{ color: var(--azul-ceu); font-weight: 700; }
-
-/* ── STEP DESC ── */
-.step-desc {
-  color: rgba(255,255,255,.6);
-  font-size: .9rem;
-  margin-bottom: 24px;
+  document.getElementById("sv" + svAtual).classList.add("active");
+  document.getElementById("si" + svAtual).classList.add("active");
+  document.querySelector(".form-container").scrollTop = 0;
 }
 
-/* ── BADGE VAGAS — mini (cabeçalho do form) ── */
-.badge-vagas-mini {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(192,57,43,.2);
-  border: 1px solid rgba(192,57,43,.5);
-  color: #ff7675;
-  font-size: .7rem;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 5px 14px;
-  border-radius: 50px;
-  margin-bottom: 12px;
-  animation: pulseBadge 1.8s ease-in-out infinite;
+/** Avança para o step 2 após validar o step 1. */
+function irSv2() {
+  if (!validar1()) return;
+  irSv(2);
 }
 
-@keyframes pulseBadge {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,.4); }
-  50%       { box-shadow: 0 0 0 8px rgba(192,57,43,0); }
+/** Avança para o step 3 (ingresso) após validar o step 2 (participação). */
+function irSv3() {
+  if (!validar2()) return;
+  irSv(3);
 }
 
-/* ── CARDS DE INGRESSO ── */
-.ingresso-opcoes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-@media (max-width: 400px) { .ingresso-opcoes { grid-template-columns: 1fr; } }
-
-.ingresso-card {
-  border: 2px solid rgba(255,255,255,.12);
-  border-radius: 20px;
-  padding: 32px 16px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .25s;
-  position: relative;
-  overflow: hidden;
-}
-.ingresso-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent, rgba(245,197,24,.04));
-  opacity: 0;
-  transition: opacity .25s;
-}
-.ingresso-card:hover { transform: translateY(-4px); border-color: rgba(245,197,24,.35); }
-.ingresso-card:hover::before { opacity: 1; }
-.ingresso-card.selected {
-  border-color: var(--amarelo);
-  background: rgba(245,197,24,.08);
-  box-shadow: 0 0 0 3px rgba(245,197,24,.2);
-}
-.ingresso-ico { font-size: 3rem; display: block; margin-bottom: 12px; }
-.ingresso-card h4 { font-size: 1.05rem; font-weight: 900; margin-bottom: 4px; color: #fff; }
-.ingresso-card p  { font-size: .8rem; color: rgba(255,255,255,.5); }
-.ingresso-card.selected h4 { color: var(--amarelo); }
-
-/* ── MUSIC PLAYER FLUTUANTE ── */
-.music-player {
-  position: fixed;
-  bottom: 28px;
-  right: 28px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(15, 28, 50, .9);
-  border: 1px solid rgba(245,197,24,.3);
-  padding: 10px 16px 10px 10px;
-  border-radius: 50px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0,0,0,.4);
-  z-index: 9999;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity .4s ease, transform .4s ease;
-  pointer-events: none;
-}
-.music-player.show {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: all;
-}
-.music-btn {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, var(--amarelo), var(--laranja));
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: transform .2s;
-  position: relative;
-}
-.music-btn:hover { transform: scale(1.12); }
-.music-icon-pause { display: none; }
-.music-btn.playing .music-icon-play  { display: none; }
-.music-btn.playing .music-icon-pause { display: block; }
-
-.music-label {
-  font-size: .78rem;
-  font-weight: 700;
-  color: rgba(255,255,255,.7);
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/** Avança para o step 4 (pagamento) após validar o step 3 (ingresso). */
+function irSv4() {
+  if (tipoIngresso === null) {
+    toast("⚠️ Selecione o tipo de ingresso.");
+    return;
+  }
+  irSv(4);
 }
 
-.music-pulso {
-  position: absolute;
-  bottom: 28px;
-  right: 28px;
-  width: 60px; height: 60px;
-  border-radius: 50%;
-  border: 2px solid var(--amarelo);
-  opacity: 0;
-  z-index: 9998;
-  pointer-events: none;
-  transition: opacity .3s;
-}
-.music-pulso.ativo {
-  opacity: 1;
-  animation: musicPulse 2s ease-out infinite;
-}
-@keyframes musicPulse {
-  0%   { transform: scale(1);   opacity: .6; }
-  100% { transform: scale(2.2); opacity: 0;  }
+/* ════════════════════════════════════════
+   VALIDAÇÕES
+   ════════════════════════════════════════ */
+
+/**
+ * Marca um campo como inválido, exibe toast e agenda remoção do erro.
+ * @param {HTMLElement} el - O elemento de input.
+ * @param {string} msg - Mensagem de erro para o toast.
+ */
+function _erroField(el, msg) {
+  el.classList.add("err");
+  toast(msg);
+  el.focus();
+  setTimeout(() => el.classList.remove("err"), 2500);
 }
 
-/* ── CONSENTIMENTO LGPD ── */
-.lgpd-consent {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-top: 20px;
+/**
+ * Valida os campos do step 1 (dados pessoais).
+ * Inclui verificações de formato real para e-mail, CPF e telefone.
+ * @returns {boolean} true se válido, false caso contrário.
+ */
+function validar1() {
+  const nome  = document.getElementById("f_nome");
+  const email = document.getElementById("f_email");
+  const tel   = document.getElementById("f_tel");
+  const cpf   = document.getElementById("f_cpf");
+  const rg    = document.getElementById("f_rg");
+
+  // Nome: mínimo 2 palavras
+  if (!nome.value.trim() || nome.value.trim().split(" ").length < 2) {
+    _erroField(nome, "⚠️ Informe seu nome completo (nome e sobrenome).");
+    return false;
+  }
+
+  // E-mail: formato básico via regex
+  const reEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!reEmail.test(email.value.trim())) {
+    _erroField(email, "⚠️ Informe um e-mail válido.");
+    return false;
+  }
+
+  // Telefone: 14 ou 15 caracteres com máscara (ex: (85) 99999-9999)
+  const telLimpo = tel.value.replace(/\D/g, "");
+  if (telLimpo.length < 10 || telLimpo.length > 11) {
+    _erroField(tel, "⚠️ Informe um telefone válido com DDD.");
+    return false;
+  }
+
+  // CPF: deve ter 11 dígitos e passar na validação matemática
+  const cpfLimpo = cpf.value.replace(/\D/g, "");
+  if (cpfLimpo.length !== 11 || !_cpfValido(cpfLimpo)) {
+    _erroField(cpf, "⚠️ Informe um CPF válido.");
+    return false;
+  }
+
+  // RG: apenas presença
+  if (!rg.value.trim()) {
+    _erroField(rg, "⚠️ Preencha o RG.");
+    return false;
+  }
+
+  return true;
 }
 
-.lgpd-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  cursor: pointer;
-  font-size: .8rem;
-  color: rgba(255,255,255,.55);
-  line-height: 1.5;
+/**
+ * Valida o CPF matematicamente (algoritmo oficial).
+ * @param {string} c - String com 11 dígitos numéricos.
+ * @returns {boolean}
+ */
+function _cpfValido(c) {
+  if (/^(\d)\1{10}$/.test(c)) return false; // sequências repetidas (ex: 111.111.111-11)
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += parseInt(c[i]) * (10 - i);
+  let r = (soma * 10) % 11;
+  if (r === 10 || r === 11) r = 0;
+  if (r !== parseInt(c[9])) return false;
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += parseInt(c[i]) * (11 - i);
+  r = (soma * 10) % 11;
+  if (r === 10 || r === 11) r = 0;
+  return r === parseInt(c[10]);
 }
 
-.lgpd-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  margin-top: 2px;
-  accent-color: var(--amarelo);
-  cursor: pointer;
+/**
+ * Valida os campos do step 2 (participação / comunidade).
+ * @returns {boolean} true se válido, false caso contrário.
+ */
+function validar2() {
+  if (comSelecionada === null) {
+    toast("⚠️ Selecione sua participação.");
+    return false;
+  }
+  if (comSelecionada === false) {
+    const ind = document.getElementById("f_indicacao");
+    if (!ind.value.trim()) {
+      ind.classList.add("err");
+      toast("⚠️ Informe quem te indicou.");
+      setTimeout(() => ind.classList.remove("err"), 2500);
+      return false;
+    }
+  }
+  return true;
 }
 
-.lgpd-label strong { color: rgba(255,255,255,.75); }
+/* ════════════════════════════════════════
+   COMUNIDADE
+   ════════════════════════════════════════ */
 
-.lgpd-label:hover { color: rgba(255,255,255,.75); }
+/**
+ * Registra a seleção de comunidade e exibe/oculta campo condicional.
+ * @param {boolean} sim - true = pertence à comunidade, false = não pertence.
+ */
+function selecionarCom(sim) {
+  comSelecionada = sim;
+
+  document.getElementById("rbSim").classList.toggle("selected", sim === true);
+  document.getElementById("rbNao").classList.toggle("selected", sim === false);
+
+  const cond = document.getElementById("condIndicacao");
+  if (sim === false) {
+    cond.classList.add("show");
+  } else {
+    cond.classList.remove("show");
+    document.getElementById("f_indicacao").value = "";
+  }
+}
+
+/* ════════════════════════════════════════
+   TIPO DE INGRESSO
+   ════════════════════════════════════════ */
+
+/**
+ * Seleciona o tipo de ingresso e adapta o card de cartão dinamicamente.
+ * @param {'individual'|'mesa'} tipo
+ */
+function selecionarIngresso(tipo) {
+  tipoIngresso = tipo;
+
+  const cardInd  = document.getElementById('ingressoIndividual');
+  const cardMesa = document.getElementById('ingressoMesa');
+  const btn      = document.getElementById('btnStep3');
+
+  cardInd.classList.toggle('selected', tipo === 'individual');
+  cardInd.setAttribute('aria-pressed', tipo === 'individual');
+  cardMesa.classList.toggle('selected', tipo === 'mesa');
+  cardMesa.setAttribute('aria-pressed', tipo === 'mesa');
+
+  // Habilita botão de avançar
+  btn.disabled = false;
+  btn.removeAttribute('aria-disabled');
+
+  // Adapta descrição do pagamento por cartão
+  const titulo = document.getElementById('cartaoTitulo');
+  const desc   = document.getElementById('cartaoDesc');
+  if (titulo && desc) {
+    if (tipo === 'individual') {
+      titulo.textContent = '💳 Pagamento por Cartão — Individual';
+      desc.innerHTML     = 'Ao finalizar, você será redirecionado de forma segura para o pagamento na Cielo.';
+    } else {
+      titulo.textContent = '💳 Pagamento por Cartão — Mesa';
+      desc.innerHTML     = 'Ao finalizar, você será redirecionado para o ambiente seguro da Cielo para efetuar o pagamento da Mesa.<br>Aceitamos Visa, Mastercard, Elo e Amex.';
+    }
+  }
+
+  // Reseta seleção de pagamento ao mudar ingresso
+  pagSelecionado = null;
+  document.getElementById('pixCard').classList.remove('selected');
+  document.getElementById('cartaoCard').classList.remove('selected');
+  document.getElementById('pdPix').classList.remove('show');
+  document.getElementById('pdCartao').classList.remove('show');
+  document.getElementById('btnFinalizar').disabled = true;
+}
+
+/* ════════════════════════════════════════
+   PAGAMENTO
+   ════════════════════════════════════════ */
+
+/**
+ * Seleciona o método de pagamento e habilita o botão finalizar.
+ * @param {"pix"|"cartao"} tipo - Método de pagamento.
+ */
+function selecionarPag(tipo) {
+  pagSelecionado = tipo;
+
+  document.getElementById('pixCard').classList.toggle('selected',   tipo === 'pix');
+  document.getElementById('cartaoCard').classList.toggle('selected', tipo === 'cartao');
+  document.getElementById('pdPix').classList.toggle('show',          tipo === 'pix');
+  document.getElementById('pdCartao').classList.toggle('show',       tipo === 'cartao');
+
+  // Habilita Finalizar apenas se LGPD também estiver marcado
+  const chk = document.getElementById('chkLGPD');
+  document.getElementById('btnFinalizar').disabled = !(chk && chk.checked);
+}
+
+/** Copia a chave Pix para a área de transferência. */
+function copiarPix() {
+  navigator.clipboard
+    .writeText(CFG.PIX_KEY)   // Fonte única: config.js
+    .then(() => toast('✅ Chave Pix copiada!'));
+}
+
+/**
+ * Controla o botão Finalizar com base no checkbox de consentimento LGPD.
+ * O botão só fica ativo quando o usuário:
+ *  a) marcou o checkbox de consentimento, E
+ *  b) já selecionou um método de pagamento.
+ */
+function toggleLGPD() {
+  const chk = document.getElementById('chkLGPD');
+  const btn = document.getElementById('btnFinalizar');
+  // Só habilita se AMBAS as condições são verdadeiras
+  btn.disabled = !(chk.checked && pagSelecionado !== null);
+}
+
+/* ════════════════════════════════════════
+   FINALIZAR / ENVIO
+   ════════════════════════════════════════ */
+
+/**
+ * Coleta os dados do formulário, envia ao webhook e exibe confirmação.
+ * Proteções: honeypot anti-bot + rate limiting client-side.
+ */
+async function finalizar() {
+  // ── Proteção 1: Honeypot anti-bot ──
+  // Bots preenchem campos ocultos; humanos não vêem nem tocam neles
+  const honeypot = document.getElementById('f_website');
+  if (honeypot && honeypot.value.trim() !== '') {
+    // Bot detectado — simula sucesso para não revelar a proteção
+    console.warn('[Security] Submissão bloqueada: honeypot preenchido.');
+    _mostrarSucesso('Bot', 'bot@bloqueado.invalid');
+    return;
+  }
+
+  // ── Proteção 2: Rate Limiting ──
+  if (!_rateLimitOk()) {
+    toast('❌ Muitas tentativas. Aguarde alguns minutos e tente novamente.', 5000);
+    return;
+  }
+
+  const btn = document.getElementById('btnFinalizar');
+  btn.disabled    = true;
+  btn.textContent = 'Enviando...';
+
+  const dados = {
+    nome:              document.getElementById('f_nome').value.trim(),
+    email:             document.getElementById('f_email').value.trim(),
+    telefone:          document.getElementById('f_tel').value.trim(),
+    cpf:               document.getElementById('f_cpf').value.trim(),
+    rg:                document.getElementById('f_rg').value.trim(),
+    comunidade:        comSelecionada ? 'Sim' : 'Não',
+    indicacao:         document.getElementById('f_indicacao').value.trim() || '-',
+    tipo_ingresso:     tipoIngresso === 'individual' ? 'Individual' : 'Mesa',
+    pagamento:         pagSelecionado === 'pix' ? 'Pix' : 'Cartão',
+    status_pagamento:  'Aguardando',
+    data_inscricao:    new Date().toLocaleString('pt-BR'),
+  };
+
+  try {
+    await fetch(CFG.WEBHOOK, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify(dados),
+      mode:    'no-cors',
+    });
+    // OBS: modo no-cors nunca lança erro mesmo com falha HTTP;
+    // tratamos apenas erros de rede (offline, DNS, timeout).
+  } catch (e) {
+    toast('❌ Sem conexão. Verifique sua internet e tente novamente.', 4000);
+    btn.disabled    = false;
+    btn.textContent = '🎉 Finalizar Inscrição';
+    return;
+  }
+
+  _mostrarSucesso(dados.nome, dados.email);
+
+  if (pagSelecionado === 'cartao') {
+    toast('🔄 Redirecionando para o ambiente seguro da Cielo...', 3000);
+    setTimeout(() => {
+      window.location.href = CFG.LINK_CARTAO;
+    }, 2000);
+  }
+}
+
+/**
+ * Exibe a tela de sucesso com o nome e e-mail mascarado.
+ * @param {string} nome  - Nome completo do inscrito.
+ * @param {string} email - E-mail (será exibido mascarado por segurança).
+ */
+function _mostrarSucesso(nome, email) {
+  document.getElementById('stepsWrap').classList.add('hidden');
+  document.getElementById('formBody').classList.add('hidden');
+
+  const sv = document.getElementById('successView');
+  sv.classList.add('show');
+
+  document.getElementById('sNome').textContent  = nome.split(' ')[0];
+
+  // Mascara o e-mail: jo***@gmail.com
+  const [user, domain] = email.split('@');
+  const emailMascarado = user.length > 2
+    ? user.slice(0, 2) + '***@' + domain
+    : '***@' + domain;
+  document.getElementById('sEmail').textContent = emailMascarado;
+}
+
+/* ════════════════════════════════════════
+   RESET
+   ════════════════════════════════════════ */
+
+/** Reseta o formulário ao estado inicial. */
+function resetForm() {
+  svAtual        = 1;
+  comSelecionada = null;
+  tipoIngresso   = null;
+  pagSelecionado = null;
+
+  // Steps — agora são 4
+  ["sv1","sv2","sv3","sv4"].forEach(id => document.getElementById(id).classList.remove("active"));
+  document.getElementById("sv1").classList.add("active");
+
+  ["si1","si2","si3","si4"].forEach(id => document.getElementById(id).classList.remove("active","done"));
+  document.getElementById("si1").classList.add("active");
+
+  // Mostrar estrutura — remove classes hidden (CSS-first)
+  document.getElementById("stepsWrap").classList.remove("hidden");
+  document.getElementById("formBody").classList.remove("hidden");
+  document.getElementById("successView").classList.remove("show");
+
+  // Ingresso
+  document.getElementById('ingressoIndividual').classList.remove('selected');
+  document.getElementById('ingressoMesa').classList.remove('selected');
+  const btnStep3 = document.getElementById('btnStep3');
+  btnStep3.disabled = true;
+  btnStep3.setAttribute('aria-disabled', 'true');
+
+  // Pagamento + LGPD
+  document.getElementById('btnFinalizar').disabled = true;
+  const chkLGPD = document.getElementById('chkLGPD');
+  if (chkLGPD) chkLGPD.checked = false;
+  document.getElementById("condIndicacao").classList.remove("show");
+  document.getElementById("rbSim").classList.remove("selected");
+  document.getElementById("rbNao").classList.remove("selected");
+  document.getElementById("pixCard").classList.remove("selected");
+  document.getElementById("cartaoCard").classList.remove("selected");
+  document.getElementById("pdPix").classList.remove("show");
+  document.getElementById("pdCartao").classList.remove("show");
+
+  // Campos de texto
+  ["f_nome","f_email","f_tel","f_cpf","f_rg","f_indicacao"]
+    .forEach(id => (document.getElementById(id).value = ""));
+}
+
+/* ════════════════════════════════════════
+   MÁSCARAS DE INPUT
+   ════════════════════════════════════════ */
+
+document.getElementById("f_cpf").addEventListener("input", function () {
+  let v = this.value.replace(/\D/g, "");
+  v = v
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  this.value = v;
+});
+
+document.getElementById("f_tel").addEventListener("input", function () {
+  let v = this.value.replace(/\D/g, "");
+  v = v
+    .replace(/^(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+  this.value = v;
+});
