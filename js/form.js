@@ -14,9 +14,9 @@
  */
 
 /* ── Estado do formulário ── */
-let svAtual        = 1;
+let svAtual = 1;
 let comSelecionada = null;
-let tipoIngresso   = null;  // 'individual' | 'mesa'
+let tipoIngresso = null;  // 'individual' | 'mesa'
 let pagSelecionado = null;
 
 /* ── Rate Limiting (anti-spam client-side) ── */
@@ -27,8 +27,8 @@ const RL_KEY = 'arraia_submissoes';
  * @returns {boolean} true se pode enviar, false se bloqueado.
  */
 function _rateLimitOk() {
-  const agora   = Date.now();
-  const raw     = localStorage.getItem(RL_KEY);
+  const agora = Date.now();
+  const raw = localStorage.getItem(RL_KEY);
   const registro = raw ? JSON.parse(raw) : { count: 0, inicio: agora };
 
   // Reseta a janela se já passou o tempo
@@ -113,11 +113,11 @@ function _erroField(el, msg) {
  * @returns {boolean} true se válido, false caso contrário.
  */
 function validar1() {
-  const nome  = document.getElementById("f_nome");
+  const nome = document.getElementById("f_nome");
   const email = document.getElementById("f_email");
-  const tel   = document.getElementById("f_tel");
-  const cpf   = document.getElementById("f_cpf");
-  const rg    = document.getElementById("f_rg");
+  const tel = document.getElementById("f_tel");
+  const cpf = document.getElementById("f_cpf");
+  const rg = document.getElementById("f_rg");
 
   // Nome: mínimo 2 palavras
   if (!nome.value.trim() || nome.value.trim().split(" ").length < 2) {
@@ -229,9 +229,9 @@ function selecionarCom(sim) {
 function selecionarIngresso(tipo) {
   tipoIngresso = tipo;
 
-  const cardInd  = document.getElementById('ingressoIndividual');
+  const cardInd = document.getElementById('ingressoIndividual');
   const cardMesa = document.getElementById('ingressoMesa');
-  const btn      = document.getElementById('btnStep3');
+  const btn = document.getElementById('btnStep3');
 
   cardInd.classList.toggle('selected', tipo === 'individual');
   cardInd.setAttribute('aria-pressed', tipo === 'individual');
@@ -244,14 +244,14 @@ function selecionarIngresso(tipo) {
 
   // Adapta descrição do pagamento por cartão
   const titulo = document.getElementById('cartaoTitulo');
-  const desc   = document.getElementById('cartaoDesc');
+  const desc = document.getElementById('cartaoDesc');
   if (titulo && desc) {
     if (tipo === 'individual') {
       titulo.textContent = '💳 Pagamento por Cartão — Individual';
-      desc.innerHTML     = 'Link de pagamento individual em breve.<br>Você será notificado por e-mail após a inscrição.';
+      desc.innerHTML = 'Ao finalizar, você será redirecionado de forma segura para o pagamento na Cielo.';
     } else {
       titulo.textContent = '💳 Pagamento por Cartão — Mesa';
-      desc.innerHTML     = 'Ao finalizar, você receberá um link seguro de pagamento no e-mail cadastrado.<br>Aceitamos Visa, Mastercard, Elo e Amex.';
+      desc.innerHTML = 'Ao finalizar, você será redirecionado para o ambiente seguro da Cielo para efetuar o pagamento da Mesa.<br>Aceitamos Visa, Mastercard, Elo e Amex.';
     }
   }
 
@@ -275,10 +275,10 @@ function selecionarIngresso(tipo) {
 function selecionarPag(tipo) {
   pagSelecionado = tipo;
 
-  document.getElementById('pixCard').classList.toggle('selected',   tipo === 'pix');
+  document.getElementById('pixCard').classList.toggle('selected', tipo === 'pix');
   document.getElementById('cartaoCard').classList.toggle('selected', tipo === 'cartao');
-  document.getElementById('pdPix').classList.toggle('show',          tipo === 'pix');
-  document.getElementById('pdCartao').classList.toggle('show',       tipo === 'cartao');
+  document.getElementById('pdPix').classList.toggle('show', tipo === 'pix');
+  document.getElementById('pdCartao').classList.toggle('show', tipo === 'cartao');
 
   // Habilita Finalizar apenas se LGPD também estiver marcado
   const chk = document.getElementById('chkLGPD');
@@ -331,40 +331,62 @@ async function finalizar() {
   }
 
   const btn = document.getElementById('btnFinalizar');
-  btn.disabled    = true;
+  btn.disabled = true;
   btn.textContent = 'Enviando...';
 
   const dados = {
-    nome:              document.getElementById('f_nome').value.trim(),
-    email:             document.getElementById('f_email').value.trim(),
-    telefone:          document.getElementById('f_tel').value.trim(),
-    cpf:               document.getElementById('f_cpf').value.trim(),
-    rg:                document.getElementById('f_rg').value.trim(),
-    comunidade:        comSelecionada ? 'Sim' : 'Não',
-    indicacao:         document.getElementById('f_indicacao').value.trim() || '-',
-    tipo_ingresso:     tipoIngresso === 'individual' ? 'Individual' : 'Mesa',
-    pagamento:         pagSelecionado === 'pix' ? 'Pix' : 'Cartão',
-    status_pagamento:  'Aguardando',
-    data_inscricao:    new Date().toLocaleString('pt-BR'),
+    nome: document.getElementById('f_nome').value.trim(),
+    email: document.getElementById('f_email').value.trim(),
+    telefone: document.getElementById('f_tel').value.trim(),
+    cpf: document.getElementById('f_cpf').value.trim(),
+    rg: document.getElementById('f_rg').value.trim(),
+    comunidade: comSelecionada ? 'Sim' : 'Não',
+    indicacao: document.getElementById('f_indicacao').value.trim() || '-',
+    tipo_ingresso: tipoIngresso === 'individual' ? 'Individual' : 'Mesa',
+    pagamento: pagSelecionado === 'pix' ? 'Pix' : 'Cartão',
+    status_pagamento: 'Aguardando',
+    data_inscricao: new Date().toLocaleString('pt-BR'),
   };
 
   try {
     await fetch(CFG.WEBHOOK, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body:    JSON.stringify(dados),
-      mode:    'no-cors',
+      body: JSON.stringify(dados),
+      mode: 'no-cors',
     });
     // OBS: modo no-cors nunca lança erro mesmo com falha HTTP;
     // tratamos apenas erros de rede (offline, DNS, timeout).
   } catch (e) {
-    toast('❌ Sem conexão. Verifique sua internet e tente novamente.', 4000);
-    btn.disabled    = false;
-    btn.textContent = '🎉 Finalizar Inscrição';
-    return;
+    console.warn("Erro ao enviar webhook:", e);
+
+    // Se a pessoa selecionou Cartão, NUNCA podemos impedir o redirecionamento de 
+    // pagamento caso a internet ou Adblock falhe no envio da planilha. A venda é prioridade.
+    if (pagSelecionado === 'cartao') {
+      toast('⚠️ Alguns dados falharam, mas prosseguindo para o pagamento...', 3500);
+      setTimeout(() => {
+        window.location.href = CFG.LINK_CARTAO;
+      }, 2000);
+      return;
+    }
+
+    // Se fosse Pix/Individual e na Vercel relatar erro verdadeiro:
+    if (window.location.protocol !== 'file:') {
+      toast('❌ Erro de conexão com a planilha. Verifique internet/Adblock.', 4000);
+      btn.disabled = false;
+      btn.textContent = '🎉 Finalizar Inscrição';
+      return;
+    }
   }
 
   _mostrarSucesso(dados.nome, dados.email);
+
+  if (pagSelecionado === 'cartao') {
+    toast('🔄 Redirecionando para o ambiente seguro da Cielo...', 3000);
+    setTimeout(() => {
+      window.location.href = CFG.LINK_CARTAO;
+    }, 2000);
+  }
 }
 
 /**
@@ -379,7 +401,7 @@ function _mostrarSucesso(nome, email) {
   const sv = document.getElementById('successView');
   sv.classList.add('show');
 
-  document.getElementById('sNome').textContent  = nome.split(' ')[0];
+  document.getElementById('sNome').textContent = nome.split(' ')[0];
 
   // Mascara o e-mail: jo***@gmail.com
   const [user, domain] = email.split('@');
@@ -395,16 +417,16 @@ function _mostrarSucesso(nome, email) {
 
 /** Reseta o formulário ao estado inicial. */
 function resetForm() {
-  svAtual        = 1;
+  svAtual = 1;
   comSelecionada = null;
-  tipoIngresso   = null;
+  tipoIngresso = null;
   pagSelecionado = null;
 
   // Steps — agora são 4
-  ["sv1","sv2","sv3","sv4"].forEach(id => document.getElementById(id).classList.remove("active"));
+  ["sv1", "sv2", "sv3", "sv4"].forEach(id => document.getElementById(id).classList.remove("active"));
   document.getElementById("sv1").classList.add("active");
 
-  ["si1","si2","si3","si4"].forEach(id => document.getElementById(id).classList.remove("active","done"));
+  ["si1", "si2", "si3", "si4"].forEach(id => document.getElementById(id).classList.remove("active", "done"));
   document.getElementById("si1").classList.add("active");
 
   // Mostrar estrutura — remove classes hidden (CSS-first)
@@ -432,7 +454,7 @@ function resetForm() {
   document.getElementById("pdCartao").classList.remove("show");
 
   // Campos de texto
-  ["f_nome","f_email","f_tel","f_cpf","f_rg","f_indicacao"]
+  ["f_nome", "f_email", "f_tel", "f_cpf", "f_rg", "f_indicacao"]
     .forEach(id => (document.getElementById(id).value = ""));
 }
 
