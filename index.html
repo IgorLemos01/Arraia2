@@ -480,32 +480,31 @@
 
       </div>
 
-      <!-- Detalhes Pix -->
       <div class="pag-detail" id="pdPix">
-        <div class="pix-box">
-          <h4>🔑 Chave Pix</h4>
-          <div class="pix-key-display" id="pixKey" aria-label="Chave Pix">
-            nossacasanossochao@comshalom.org
-          </div>
-          <button class="btn-copy" onclick="copiarPix()" id="btnCopyPix">📋 Copiar Chave</button>
-          <p class="pix-obs">
-            Após o pagamento, envie o comprovante via WhatsApp para confirmar sua reserva.
+        <div class="pix-info-box" style="text-align: center; padding: 20px; background: rgba(39, 174, 96, 0.05); border: 1px solid rgba(39, 174, 96, 0.2); border-radius: 12px; margin-top: 15px;">
+          <div style="font-size: 32px; margin-bottom: 10px;">⚡</div>
+          <h4 style="color: #27ae60; margin-bottom: 8px;">Pagamento Instantâneo</h4>
+          <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); line-height: 1.5; margin-bottom: 15px;">
+            Ao finalizar, geraremos um <strong>QR Code exclusivo</strong> para sua inscrição.
           </p>
+          <ul style="list-style: none; padding: 0; margin: 0; display: inline-block; text-align: left;">
+            <li style="font-size: 0.85rem; color: #27ae60; margin-bottom: 5px;">✅ Confirmação imediata</li>
+            <li style="font-size: 0.85rem; color: #27ae60; margin-bottom: 5px;">✅ Sem envio de comprovante</li>
+            <li style="font-size: 0.85rem; color: #27ae60;">✅ Inscrição garantida na hora</li>
+          </ul>
         </div>
       </div>
 
-      <!-- Detalhes Cartão -->
       <div class="pag-detail" id="pdCartao">
-        <div class="cartao-info-box">
-          <p class="cartao-titulo" id="cartaoTitulo">💳 Pagamento por Cartão</p>
-          <p class="cartao-desc" id="cartaoDesc">
-            Ao finalizar, você receberá um link seguro de pagamento no e-mail cadastrado.<br>
-            Aceitamos Visa, Mastercard, Elo e Amex.
+        <div class="cartao-info-box" style="text-align: center; padding: 20px; background: rgba(245, 197, 24, 0.05); border: 1px solid rgba(245, 197, 24, 0.2); border-radius: 12px; margin-top: 15px;">
+          <div style="font-size: 32px; margin-bottom: 10px;">🔐</div>
+          <h4 style="color: #f5c518; margin-bottom: 8px;">Checkout Seguro</h4>
+          <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); line-height: 1.5;">
+            Você será redirecionado para o ambiente seguro do <strong>PagBank</strong> para concluir o pagamento.
           </p>
         </div>
       </div>
 
-      <!-- Consentimento LGPD -->
       <div class="lgpd-consent" id="lgpdConsent">
         <label class="lgpd-label">
           <input type="checkbox" id="chkLGPD" onchange="toggleLGPD()" aria-required="true">
@@ -529,9 +528,7 @@
       </button>
       <button class="btn-ghost" onclick="irSv(3)">← Voltar</button>
 
-    </div><!-- /#sv4 -->
-
-  </div><!-- /#formBody -->
+    </div>
 
   <!-- ── TELA DE SUCESSO ── -->
   <div class="success-view" id="successView" role="alert" aria-live="assertive">
