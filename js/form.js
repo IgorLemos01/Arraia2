@@ -1,480 +1,313 @@
-/**
- * form.js — Lógica completa do formulário de inscrição
- * Arraiá da Paz 2026
- *
- * Responsabilidades:
- *  - Controle de steps (etapas)
- *  - Validações por etapa
- *  - Seleção de comunidade e pagamento
- *  - Cópia da chave Pix
- *  - Envio via webhook (Google Apps Script)
- *  - Exibição da tela de sucesso
- *  - Reset completo do formulário
- *  - Máscaras de CPF e Telefone
- */
+// ═══════════════════════════════════════════════════════
+//  form.js — Arraiá da Paz 2026
+//  Integração com backend PagBank
+// ═══════════════════════════════════════════════════════
 
-/* ── Estado do formulário ── */
-let svAtual = 1;
-let comSelecionada = null;
-let tipoIngresso = null;  // 'individual' | 'mesa'
-let pagSelecionado = null;
+// URL do seu backend no Easypanel (troque quando subir)
+const BACKEND_URL = "https://painel-banco.mvnptn.easypanel.host";
 
-/* ── Rate Limiting (anti-spam client-side) ── */
-const RL_KEY = 'arraia_submissoes';
+// ── Estado global ─────────────────────────────────────
+let tipoIngresso  = null;  // "mesa" | "individual"
+let tipoPagamento = null;  // "pix" | "cartao"
 
-/**
- * Verifica se o usuário está dentro do limite de envios permitidos.
- * @returns {boolean} true se pode enviar, false se bloqueado.
- */
-function _rateLimitOk() {
-  const agora = Date.now();
-  const raw = localStorage.getItem(RL_KEY);
-  const registro = raw ? JSON.parse(raw) : { count: 0, inicio: agora };
-
-  // Reseta a janela se já passou o tempo
-  if (agora - registro.inicio > CFG.JANELA_MS) {
-    localStorage.setItem(RL_KEY, JSON.stringify({ count: 0, inicio: agora }));
-    return true;
-  }
-
-  if (registro.count >= CFG.MAX_SUBMISSOES) return false;
-
-  registro.count++;
-  localStorage.setItem(RL_KEY, JSON.stringify(registro));
-  return true;
-}
-
-/* ════════════════════════════════════════
-   STEPS
-   ════════════════════════════════════════ */
-
-/**
- * Navega para um step específico do formulário.
- * @param {number} n - Número do step destino (1, 2, 3 ou 4).
- */
-function irSv(n) {
-  document.getElementById("sv" + svAtual).classList.remove("active");
-  document.getElementById("si" + svAtual).classList.remove("active");
-
-  if (svAtual < n) {
-    document.getElementById("si" + svAtual).classList.add("done");
-  } else {
-    // Voltando: remove o “done” do step que está sendo reativado
-    document.getElementById("si" + n).classList.remove("done");
-  }
-
-  svAtual = n;
-
-  document.getElementById("sv" + svAtual).classList.add("active");
-  document.getElementById("si" + svAtual).classList.add("active");
-  document.querySelector(".form-container").scrollTop = 0;
-}
-
-/** Avança para o step 2 após validar o step 1. */
-function irSv2() {
-  if (!validar1()) return;
-  irSv(2);
-}
-
-/** Avança para o step 3 (ingresso) após validar o step 2 (participação). */
-function irSv3() {
-  if (!validar2()) return;
-  irSv(3);
-}
-
-/** Avança para o step 4 (pagamento) após validar o step 3 (ingresso). */
-function irSv4() {
-  if (tipoIngresso === null) {
-    toast("⚠️ Selecione o tipo de ingresso.");
-    return;
-  }
-  irSv(4);
-}
-
-/* ════════════════════════════════════════
-   VALIDAÇÕES
-   ════════════════════════════════════════ */
-
-/**
- * Marca um campo como inválido, exibe toast e agenda remoção do erro.
- * @param {HTMLElement} el - O elemento de input.
- * @param {string} msg - Mensagem de erro para o toast.
- */
-function _erroField(el, msg) {
-  el.classList.add("err");
-  toast(msg);
-  el.focus();
-  setTimeout(() => el.classList.remove("err"), 2500);
-}
-
-/**
- * Valida os campos do step 1 (dados pessoais).
- * Inclui verificações de formato real para e-mail, CPF e telefone.
- * @returns {boolean} true se válido, false caso contrário.
- */
-function validar1() {
-  const nome = document.getElementById("f_nome");
-  const email = document.getElementById("f_email");
-  const tel = document.getElementById("f_tel");
-  const cpf = document.getElementById("f_cpf");
-  const rg = document.getElementById("f_rg");
-
-  // Nome: mínimo 2 palavras
-  if (!nome.value.trim() || nome.value.trim().split(" ").length < 2) {
-    _erroField(nome, "⚠️ Informe seu nome completo (nome e sobrenome).");
-    return false;
-  }
-
-  // E-mail: formato básico via regex
-  const reEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!reEmail.test(email.value.trim())) {
-    _erroField(email, "⚠️ Informe um e-mail válido.");
-    return false;
-  }
-
-  // Telefone: 14 ou 15 caracteres com máscara (ex: (85) 99999-9999)
-  const telLimpo = tel.value.replace(/\D/g, "");
-  if (telLimpo.length < 10 || telLimpo.length > 11) {
-    _erroField(tel, "⚠️ Informe um telefone válido com DDD.");
-    return false;
-  }
-
-  // CPF: deve ter 11 dígitos e passar na validação matemática
-  const cpfLimpo = cpf.value.replace(/\D/g, "");
-  if (cpfLimpo.length !== 11 || !_cpfValido(cpfLimpo)) {
-    _erroField(cpf, "⚠️ Informe um CPF válido.");
-    return false;
-  }
-
-  // RG: apenas presença
-  if (!rg.value.trim()) {
-    _erroField(rg, "⚠️ Preencha o RG.");
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Valida o CPF matematicamente (algoritmo oficial).
- * @param {string} c - String com 11 dígitos numéricos.
- * @returns {boolean}
- */
-function _cpfValido(c) {
-  if (/^(\d)\1{10}$/.test(c)) return false; // sequências repetidas (ex: 111.111.111-11)
-  let soma = 0;
-  for (let i = 0; i < 9; i++) soma += parseInt(c[i]) * (10 - i);
-  let r = (soma * 10) % 11;
-  if (r === 10 || r === 11) r = 0;
-  if (r !== parseInt(c[9])) return false;
-  soma = 0;
-  for (let i = 0; i < 10; i++) soma += parseInt(c[i]) * (11 - i);
-  r = (soma * 10) % 11;
-  if (r === 10 || r === 11) r = 0;
-  return r === parseInt(c[10]);
-}
-
-/**
- * Valida os campos do step 2 (participação / comunidade).
- * @returns {boolean} true se válido, false caso contrário.
- */
-function validar2() {
-  if (comSelecionada === null) {
-    toast("⚠️ Selecione sua participação.");
-    return false;
-  }
-  if (comSelecionada === false) {
-    const ind = document.getElementById("f_indicacao");
-    if (!ind.value.trim()) {
-      ind.classList.add("err");
-      toast("⚠️ Informe quem te indicou.");
-      setTimeout(() => ind.classList.remove("err"), 2500);
-      return false;
-    }
-  }
-  return true;
-}
-
-/* ════════════════════════════════════════
-   COMUNIDADE
-   ════════════════════════════════════════ */
-
-/**
- * Registra a seleção de comunidade e exibe/oculta campo condicional.
- * @param {boolean} sim - true = pertence à comunidade, false = não pertence.
- */
-function selecionarCom(sim) {
-  comSelecionada = sim;
-
-  document.getElementById("rbSim").classList.toggle("selected", sim === true);
-  document.getElementById("rbNao").classList.toggle("selected", sim === false);
-
-  const cond = document.getElementById("condIndicacao");
-  if (sim === false) {
-    cond.classList.add("show");
-  } else {
-    cond.classList.remove("show");
-    document.getElementById("f_indicacao").value = "";
-  }
-}
-
-/* ════════════════════════════════════════
-   TIPO DE INGRESSO
-   ════════════════════════════════════════ */
-
-/**
- * Seleciona o tipo de ingresso e adapta o card de cartão dinamicamente.
- * @param {'individual'|'mesa'} tipo
- */
+// ── Seleção de ingresso ───────────────────────────────
 function selecionarIngresso(tipo) {
   tipoIngresso = tipo;
 
-  const cardInd = document.getElementById('ingressoIndividual');
-  const cardMesa = document.getElementById('ingressoMesa');
-  const btn = document.getElementById('btnStep3');
+  document.querySelectorAll(".ingresso-card").forEach(el => {
+    el.classList.remove("selected");
+    el.setAttribute("aria-pressed", "false");
+  });
 
-  cardInd.classList.toggle('selected', tipo === 'individual');
-  cardInd.setAttribute('aria-pressed', tipo === 'individual');
-  cardMesa.classList.toggle('selected', tipo === 'mesa');
-  cardMesa.setAttribute('aria-pressed', tipo === 'mesa');
+  const card = document.getElementById(
+    tipo === "mesa" ? "ingressoMesa" : "ingressoIndividual"
+  );
+  card.classList.add("selected");
+  card.setAttribute("aria-pressed", "true");
 
-  // Habilita botão de avançar
-  btn.disabled = false;
-  btn.removeAttribute('aria-disabled');
+  // Mostra valor na descrição
+  const valores = { mesa: "R$ 150,00", individual: "R$ 40,00" };
+  document.getElementById("btnStep3").disabled = false;
+  document.getElementById("btnStep3").setAttribute("aria-disabled", "false");
 
-  // Adapta descrição do pagamento por cartão
-  const titulo = document.getElementById('cartaoTitulo');
-  const desc = document.getElementById('cartaoDesc');
-  if (titulo && desc) {
-    if (tipo === 'individual') {
-      titulo.textContent = '💳 Pagamento por Cartão — Individual';
-      desc.innerHTML = 'Ao finalizar, você será redirecionado de forma segura para o pagamento na Cielo.';
-    } else {
-      titulo.textContent = '💳 Pagamento por Cartão — Mesa';
-      desc.innerHTML = 'Ao finalizar, você será redirecionado para o ambiente seguro da Cielo para efetuar o pagamento da Mesa.<br>Aceitamos Visa, Mastercard, Elo e Amex.';
-    }
-  }
-
-  // Reseta seleção de pagamento ao mudar ingresso
-  pagSelecionado = null;
-  document.getElementById('pixCard').classList.remove('selected');
-  document.getElementById('cartaoCard').classList.remove('selected');
-  document.getElementById('pdPix').classList.remove('show');
-  document.getElementById('pdCartao').classList.remove('show');
-  document.getElementById('btnFinalizar').disabled = true;
+  // Atualiza descrição do step 4 quando chegar lá
+  window._ingressoValor = valores[tipo];
 }
 
-/* ════════════════════════════════════════
-   PAGAMENTO
-   ════════════════════════════════════════ */
-
-/**
- * Seleciona o método de pagamento e habilita o botão finalizar.
- * @param {"pix"|"cartao"} tipo - Método de pagamento.
- */
+// ── Seleção de pagamento ──────────────────────────────
 function selecionarPag(tipo) {
-  pagSelecionado = tipo;
+  tipoPagamento = tipo;
 
-  document.getElementById('pixCard').classList.toggle('selected', tipo === 'pix');
-  document.getElementById('cartaoCard').classList.toggle('selected', tipo === 'cartao');
-  document.getElementById('pdPix').classList.toggle('show', tipo === 'pix');
-  document.getElementById('pdCartao').classList.toggle('show', tipo === 'cartao');
+  document.querySelectorAll(".pag-card").forEach(el => {
+    el.classList.remove("selected");
+    el.setAttribute("aria-pressed", "false");
+  });
 
-  // Habilita Finalizar apenas se LGPD também estiver marcado
-  const chk = document.getElementById('chkLGPD');
-  document.getElementById('btnFinalizar').disabled = !(chk && chk.checked);
+  const card = document.getElementById(tipo === "pix" ? "pixCard" : "cartaoCard");
+  card.classList.add("selected");
+  card.setAttribute("aria-pressed", "true");
+
+  // Mostra detalhes corretos
+  document.getElementById("pdPix").style.display    = tipo === "pix"    ? "block" : "none";
+  document.getElementById("pdCartao").style.display = tipo === "cartao" ? "block" : "none";
+
+  _atualizarBtnFinalizar();
 }
 
-/** Copia a chave Pix para a área de transferência. */
-function copiarPix() {
-  navigator.clipboard
-    .writeText(CFG.PIX_KEY)   // Fonte única: config.js
-    .then(() => toast('✅ Chave Pix copiada!'));
-}
-
-/**
- * Controla o botão Finalizar com base no checkbox de consentimento LGPD.
- * O botão só fica ativo quando o usuário:
- *  a) marcou o checkbox de consentimento, E
- *  b) já selecionou um método de pagamento.
- */
+// ── LGPD checkbox ─────────────────────────────────────
 function toggleLGPD() {
-  const chk = document.getElementById('chkLGPD');
-  const btn = document.getElementById('btnFinalizar');
-  // Só habilita se AMBAS as condições são verdadeiras
-  btn.disabled = !(chk.checked && pagSelecionado !== null);
+  _atualizarBtnFinalizar();
 }
 
-/* ════════════════════════════════════════
-   FINALIZAR / ENVIO
-   ════════════════════════════════════════ */
+function _atualizarBtnFinalizar() {
+  const lgpd = document.getElementById("chkLGPD")?.checked;
+  const ok   = tipoPagamento && lgpd;
+  const btn  = document.getElementById("btnFinalizar");
+  btn.disabled = !ok;
+  btn.setAttribute("aria-disabled", String(!ok));
+}
 
-/**
- * Coleta os dados do formulário, envia ao webhook e exibe confirmação.
- * Proteções: honeypot anti-bot + rate limiting client-side.
- */
+// ── Comunidade ────────────────────────────────────────
+function selecionarCom(ehMembro) {
+  const cond = document.getElementById("condIndicacao");
+  if (cond) cond.style.display = ehMembro ? "none" : "block";
+}
+
+// ── Navegação entre steps ─────────────────────────────
+function irSv(n) {
+  document.querySelectorAll(".step-view").forEach((el, i) => {
+    el.classList.toggle("active", i + 1 === n);
+  });
+  document.querySelectorAll(".step-ind").forEach((el, i) => {
+    el.classList.toggle("active", i + 1 === n);
+    el.classList.toggle("done",   i + 1  < n);
+    el.setAttribute("aria-selected", i + 1 === n ? "true" : "false");
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ── Step 1 → 2 ────────────────────────────────────────
+function irSv2() {
+  const nome  = document.getElementById("f_nome")?.value.trim();
+  const email = document.getElementById("f_email")?.value.trim();
+  const cpf   = document.getElementById("f_cpf")?.value.trim();
+
+  if (!nome)  return showToast("Informe seu nome completo", "erro");
+  if (!email || !email.includes("@")) return showToast("Informe um e-mail válido", "erro");
+  if (!cpf || cpf.replace(/\D/g,"").length !== 11)
+    return showToast("Informe um CPF válido", "erro");
+
+  irSv(2);
+}
+
+// ── Step 2 → 3 ────────────────────────────────────────
+function irSv3() {
+  const sel = document.querySelector('input[name="comunidade"]:checked');
+  if (!sel) return showToast("Informe se é da Comunidade Shalom", "erro");
+  irSv(3);
+}
+
+// ── Step 3 → 4 ────────────────────────────────────────
+function irSv4() {
+  if (!tipoIngresso) return showToast("Selecione o tipo de ingresso", "erro");
+
+  // Atualiza descrição com valor
+  const desc = document.getElementById("pagDesc");
+  if (desc && window._ingressoValor) {
+    desc.textContent = `Escolha como pagar – ${window._ingressoValor}`;
+  }
+
+  // Esconde detalhes de pag até escolher
+  document.getElementById("pdPix").style.display    = "none";
+  document.getElementById("pdCartao").style.display = "none";
+
+  irSv(4);
+}
+
+// ── Copiar chave Pix ──────────────────────────────────
+function copiarPix() {
+  const chave = document.getElementById("pixKey")?.textContent?.trim();
+  if (!chave) return;
+  navigator.clipboard.writeText(chave).then(() => showToast("Chave Pix copiada! ✅"));
+}
+
+// ── FINALIZAR ─────────────────────────────────────────
 async function finalizar() {
-  // ── Proteção 1: Honeypot anti-bot ──
-  // Bots preenchem campos ocultos; humanos não vêem nem tocam neles
-  const honeypot = document.getElementById('f_website');
-  if (honeypot && honeypot.value.trim() !== '') {
-    // Bot detectado — simula sucesso para não revelar a proteção
-    console.warn('[Security] Submissão bloqueada: honeypot preenchido.');
-    _mostrarSucesso('Bot', 'bot@bloqueado.invalid');
-    return;
-  }
+  const btn = document.getElementById("btnFinalizar");
 
-  // ── Proteção 2: Rate Limiting ──
-  if (!_rateLimitOk()) {
-    toast('❌ Muitas tentativas. Aguarde alguns minutos e tente novamente.', 5000);
-    return;
-  }
-
-  const btn = document.getElementById('btnFinalizar');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
-
+  // Coleta dados do formulário
   const dados = {
-    nome: document.getElementById('f_nome').value.trim(),
-    email: document.getElementById('f_email').value.trim(),
-    telefone: document.getElementById('f_tel').value.trim(),
-    cpf: document.getElementById('f_cpf').value.trim(),
-    rg: document.getElementById('f_rg').value.trim(),
-    comunidade: comSelecionada ? 'Sim' : 'Não',
-    indicacao: document.getElementById('f_indicacao').value.trim() || '-',
-    tipo_ingresso: tipoIngresso === 'individual' ? 'Individual' : 'Mesa',
-    pagamento: pagSelecionado === 'pix' ? 'Pix' : 'Cartão',
-    status_pagamento: 'Aguardando',
-    data_inscricao: new Date().toLocaleString('pt-BR'),
+    nome:      document.getElementById("f_nome")?.value.trim(),
+    email:     document.getElementById("f_email")?.value.trim(),
+    cpf:       document.getElementById("f_cpf")?.value.trim(),
+    telefone:  document.getElementById("f_tel")?.value.trim(),
+    rg:        document.getElementById("f_rg")?.value.trim(),
+    indicacao: document.getElementById("f_indicacao")?.value.trim(),
+    comunidade: document.querySelector('input[name="comunidade"]:checked')?.value,
+    tipo:      tipoIngresso,
+    pagamento: tipoPagamento,
   };
 
+  // Honeypot anti-bot
+  if (document.getElementById("f_website")?.value) return;
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Processando...";
+
   try {
-    await fetch(CFG.WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(dados),
-      mode: 'no-cors',
-    });
-    // OBS: modo no-cors nunca lança erro mesmo com falha HTTP;
-    // tratamos apenas erros de rede (offline, DNS, timeout).
-  } catch (e) {
-    console.warn("Erro ao enviar webhook:", e);
-
-    // Se a pessoa selecionou Cartão, NUNCA podemos impedir o redirecionamento de 
-    // pagamento caso a internet ou Adblock falhe no envio da planilha. A venda é prioridade.
-    if (pagSelecionado === 'cartao') {
-      toast('⚠️ Alguns dados falharam, mas prosseguindo para o pagamento...', 3500);
-      setTimeout(() => {
-        window.location.href = CFG.LINK_CARTAO;
-      }, 2000);
-      return;
+    if (tipoPagamento === "pix") {
+      await finalizarPix(dados);
+    } else {
+      await finalizarCartao(dados);
     }
+  } catch (err) {
+    console.error(err);
+    showToast("Erro inesperado. Tente novamente.", "erro");
+    btn.disabled = false;
+    btn.textContent = "🎉 Finalizar Inscrição";
+  }
+}
 
-    // Se fosse Pix/Individual e na Vercel relatar erro verdadeiro:
-    if (window.location.protocol !== 'file:') {
-      toast('❌ Erro de conexão com a planilha. Verifique internet/Adblock.', 4000);
-      btn.disabled = false;
-      btn.textContent = '🎉 Finalizar Inscrição';
-      return;
+// ── Finalizar via Pix ─────────────────────────────────
+async function finalizarPix(dados) {
+  const resp = await fetch(`${BACKEND_URL}/pagbank/pix`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dados),
+  });
+
+  const json = await resp.json();
+
+  if (!resp.ok) {
+    showToast(json.erro || "Erro ao gerar Pix", "erro");
+    document.getElementById("btnFinalizar").disabled = false;
+    document.getElementById("btnFinalizar").textContent = "🎉 Finalizar Inscrição";
+    return;
+  }
+
+  // Atualiza a tela de Pix com o QR Code gerado
+  const pixKey = document.getElementById("pixKey");
+  if (pixKey && json.pix_copia_cola) {
+    pixKey.textContent = json.pix_copia_cola;
+  }
+
+  // Se veio imagem do QR Code, mostra
+  if (json.pix_qrcode_img) {
+    const qrBox = document.querySelector(".pix-box");
+    if (qrBox && !document.getElementById("qrImg")) {
+      const img = document.createElement("img");
+      img.id  = "qrImg";
+      img.src = json.pix_qrcode_img;
+      img.alt = "QR Code Pix";
+      img.style.cssText = "width:180px;height:180px;margin:12px auto;display:block;border-radius:8px;";
+      qrBox.insertBefore(img, qrBox.querySelector(".pix-key-display"));
     }
   }
 
-  _mostrarSucesso(dados.nome, dados.email);
+  // Salva order_id para monitorar
+  window._orderId = json.order_id;
 
-  if (pagSelecionado === 'cartao') {
-    toast('🔄 Redirecionando para o ambiente seguro da Cielo...', 3000);
+  showToast(`Pix gerado! Valor: R$ ${json.valor_reais} ✅`);
+
+  // Mostra tela de aguardo de pagamento Pix
+  _mostrarAguardandoPix(dados, json);
+}
+
+// ── Tela de aguardo Pix ───────────────────────────────
+function _mostrarAguardandoPix(dados, pixData) {
+  const sv4 = document.getElementById("sv4");
+  if (!sv4) return;
+
+  sv4.innerHTML = `
+    <div style="text-align:center;padding:16px 0;">
+      <div style="font-size:48px;margin-bottom:8px;">💚</div>
+      <h3 style="margin:0 0 4px;">Pix gerado com sucesso!</h3>
+      <p style="color:rgba(255,255,255,.65);font-size:14px;margin:0 0 20px;">
+        Pague para confirmar sua vaga no Arraiá da Paz
+      </p>
+
+      ${pixData.pix_qrcode_img ? `
+        <img src="${pixData.pix_qrcode_img}" alt="QR Code Pix"
+          style="width:200px;height:200px;border-radius:12px;margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;">
+      ` : ""}
+
+      <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:16px;margin-bottom:16px;word-break:break-all;font-size:13px;color:rgba(255,255,255,.85);">
+        ${pixData.pix_copia_cola || "–"}
+      </div>
+
+      <button class="btn-primary" onclick="copiarPixDinamico('${pixData.pix_copia_cola}')"
+        style="margin-bottom:12px;">
+        📋 Copiar Pix Copia e Cola
+      </button>
+
+      <p style="color:rgba(255,255,255,.5);font-size:12px;">
+        Valor: <strong style="color:#f5c518;">R$ ${pixData.valor_reais}</strong> ·
+        Expira em 24h<br><br>
+        Após o pagamento, você receberá um e-mail de confirmação em<br>
+        <strong>${dados.email}</strong>
+      </p>
+
+      <p style="margin-top:16px;color:rgba(255,255,255,.4);font-size:11px;">
+        Pedido: ${pixData.order_id}
+      </p>
+    </div>
+  `;
+}
+
+function copiarPixDinamico(chave) {
+  navigator.clipboard.writeText(chave).then(() => showToast("Pix copiado! ✅"));
+}
+
+// ── Finalizar via Cartão ──────────────────────────────
+async function finalizarCartao(dados) {
+  const resp = await fetch(`${BACKEND_URL}/pagbank/cartao`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(dados),
+  });
+
+  const json = await resp.json();
+
+  if (!resp.ok) {
+    showToast(json.erro || "Erro ao criar checkout", "erro");
+    document.getElementById("btnFinalizar").disabled = false;
+    document.getElementById("btnFinalizar").textContent = "🎉 Finalizar Inscrição";
+    return;
+  }
+
+  if (json.link_pagamento) {
+    // Redireciona para o checkout do PagBank
+    showToast("Redirecionando para o pagamento seguro... 🔐");
     setTimeout(() => {
-      window.location.href = CFG.LINK_CARTAO;
-    }, 2000);
+      window.location.href = json.link_pagamento;
+    }, 1200);
+  } else {
+    showToast("Link de pagamento não disponível", "erro");
+    document.getElementById("btnFinalizar").disabled = false;
+    document.getElementById("btnFinalizar").textContent = "🎉 Finalizar Inscrição";
   }
 }
 
-/**
- * Exibe a tela de sucesso com o nome e e-mail mascarado.
- * @param {string} nome  - Nome completo do inscrito.
- * @param {string} email - E-mail (será exibido mascarado por segurança).
- */
-function _mostrarSucesso(nome, email) {
-  document.getElementById('stepsWrap').classList.add('hidden');
-  document.getElementById('formBody').classList.add('hidden');
+// ── Máscara Telefone ──────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  const tel = document.getElementById("f_tel");
+  if (tel) {
+    tel.addEventListener("input", e => {
+      let v = e.target.value.replace(/\D/g, "").substring(0, 11);
+      if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+      else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+      e.target.value = v;
+    });
+  }
 
-  const sv = document.getElementById('successView');
-  sv.classList.add('show');
-
-  document.getElementById('sNome').textContent = nome.split(' ')[0];
-
-  // Mascara o e-mail: jo***@gmail.com
-  const [user, domain] = email.split('@');
-  const emailMascarado = user.length > 2
-    ? user.slice(0, 2) + '***@' + domain
-    : '***@' + domain;
-  document.getElementById('sEmail').textContent = emailMascarado;
-}
-
-/* ════════════════════════════════════════
-   RESET
-   ════════════════════════════════════════ */
-
-/** Reseta o formulário ao estado inicial. */
-function resetForm() {
-  svAtual = 1;
-  comSelecionada = null;
-  tipoIngresso = null;
-  pagSelecionado = null;
-
-  // Steps — agora são 4
-  ["sv1", "sv2", "sv3", "sv4"].forEach(id => document.getElementById(id).classList.remove("active"));
-  document.getElementById("sv1").classList.add("active");
-
-  ["si1", "si2", "si3", "si4"].forEach(id => document.getElementById(id).classList.remove("active", "done"));
-  document.getElementById("si1").classList.add("active");
-
-  // Mostrar estrutura — remove classes hidden (CSS-first)
-  document.getElementById("stepsWrap").classList.remove("hidden");
-  document.getElementById("formBody").classList.remove("hidden");
-  document.getElementById("successView").classList.remove("show");
-
-  // Ingresso
-  document.getElementById('ingressoIndividual').classList.remove('selected');
-  document.getElementById('ingressoMesa').classList.remove('selected');
-  const btnStep3 = document.getElementById('btnStep3');
-  btnStep3.disabled = true;
-  btnStep3.setAttribute('aria-disabled', 'true');
-
-  // Pagamento + LGPD
-  document.getElementById('btnFinalizar').disabled = true;
-  const chkLGPD = document.getElementById('chkLGPD');
-  if (chkLGPD) chkLGPD.checked = false;
-  document.getElementById("condIndicacao").classList.remove("show");
-  document.getElementById("rbSim").classList.remove("selected");
-  document.getElementById("rbNao").classList.remove("selected");
-  document.getElementById("pixCard").classList.remove("selected");
-  document.getElementById("cartaoCard").classList.remove("selected");
-  document.getElementById("pdPix").classList.remove("show");
-  document.getElementById("pdCartao").classList.remove("show");
-
-  // Campos de texto
-  ["f_nome", "f_email", "f_tel", "f_cpf", "f_rg", "f_indicacao"]
-    .forEach(id => (document.getElementById(id).value = ""));
-}
-
-/* ════════════════════════════════════════
-   MÁSCARAS DE INPUT
-   ════════════════════════════════════════ */
-
-document.getElementById("f_cpf").addEventListener("input", function () {
-  let v = this.value.replace(/\D/g, "");
-  v = v
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-  this.value = v;
-});
-
-document.getElementById("f_tel").addEventListener("input", function () {
-  let v = this.value.replace(/\D/g, "");
-  v = v
-    .replace(/^(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d)/, "$1-$2");
-  this.value = v;
+  const cpf = document.getElementById("f_cpf");
+  if (cpf) {
+    cpf.addEventListener("input", e => {
+      let v = e.target.value.replace(/\D/g, "").substring(0, 11);
+      if (v.length > 9) v = `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6,9)}-${v.slice(9)}`;
+      else if (v.length > 6) v = `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6)}`;
+      else if (v.length > 3) v = `${v.slice(0,3)}.${v.slice(3)}`;
+      e.target.value = v;
+    });
+  }
 });
