@@ -359,7 +359,7 @@ function _mostrarSucesso(nomeCompleto, email, tipoPag) {
     Sua inscrição no <strong>Arraiá da Paz</strong> foi registrada com sucesso.<br>`;
 
   if (tipoPag === 'pix') {
-      Realize o pagamento via Pix para a chave<br>
+    html += `Realize o pagamento via Pix para a chave<br>
       <strong style="color:#2ecc71;font-size:1rem;">nossacasanossochao@comshalom.org</strong><br>
       Após o pagamento, sua vaga será confirmada em breve.<br>`;
   } else if (tipoPag === 'cartao' && tipoIngresso === 'lounge') {
