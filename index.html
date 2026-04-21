@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO -->
+  <title>Arraiá da Paz 2026 – Inscrições Abertas</title>
+  <meta name="description"
+    content="Participe do Arraiá da Paz 2026 no Sales Multieventos! Shows, forró, comidas típicas e mesas especiais. Entrada franca com 1kg de alimento. 04 de Julho.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Caveat:wght@600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/landing.css">
+  <link rel="stylesheet" href="css/form.css">
+
+  <!-- Scripts -->
+  <script src="js/config.js" defer></script>
+  <script src="js/toast.js" defer></script>
+  <script src="js/navigation.js" defer></script>
+  <script src="js/bandeirinhas.js" defer></script>
+  <script src="js/form.js" defer></script>
+  <script src="js/carousel.js" defer></script>
+  <script src="js/audio.js" defer></script>
+</head>
+
+<body>
+
+  <!-- Áudio de fundo -->
+  <audio id="bgAudio" src="assets/arraia-da-paz.mp3" loop autoplay preload="auto"></audio>
+
+  <!--
+  Campo honeypot anti-bot: INVISÍVEL para humanos.
+  Bots preenchem campos ocultos automaticamente.
+  Se preenchido, o envio é silenciosamente bloqueado em form.js.
+-->
+  <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;overflow:hidden;" tabindex="-1">
+    <label for="f_website">Não preencher</label>
+    <input type="text" id="f_website" name="website" autocomplete="off" tabindex="-1">
+  </div>
+
+  <!-- Player de música flutuante -->
+  <div id="musicPlayer" class="music-player" aria-label="Player de música">
+    <div id="musicPulso" class="music-pulso" aria-hidden="true"></div>
+    <button id="musicBtn" class="music-btn" onclick="toggleMusic()" aria-label="Tocar/pausar música">
+      <span class="music-icon-play">🎵</span>
+      <span class="music-icon-pause">⏸</span>
+    </button>
+    <span class="music-label">Arraiá da Paz 2026</span>
+  </div>
+
+  <!-- Bandeirinhas fixas (topo) -->
+  <div id="bandeirinhas-fixed" aria-hidden="true">
+    <canvas id="bCanvas"></canvas>
+  </div>
+
+  <!-- ══════════════════════════════════════
+     NAVBAR
+══════════════════════════════════════ -->
+  <nav role="navigation" aria-label="Navegação principal">
+    <div class="nav-logo">Arraiá <span>da Paz</span></div>
+    <button class="btn-cta" onclick="irParaPlanos()" id="navCta">🎉 Participe do Evento</button>
+  </nav>
+
+  <!-- Botão voltar fixo (visível em p2 e p3) -->
+  <button class="btn-back-fixed" id="btnBack" onclick="voltarPaginaAnterior()" aria-label="Voltar">
+    ← Voltar
+  </button>
+
+  <!-- Toast de notificação -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+
+  <!-- ══════════════════════════════════════
+     PÁGINA 1 — LANDING
+══════════════════════════════════════ -->
+  <div class="page active" id="p1">
+
+    <!-- Hero -->
+    <div class="hero">
+      <img src="assets/hero.jpeg" alt="Banner do Arraiá da Paz 2026 com decoração junina colorida" loading="eager">
+      <div class="hero-overlay" aria-hidden="true"></div>
+    </div>
+
+    <!-- ── O Evento ── -->
+    <section aria-labelledby="sec-infos-titulo">
+      <span class="section-tag">🎪 O Evento</span>
+      <h1 class="section-title" id="sec-infos-titulo">
+        Arraiá <em>da Paz</em> 2026
+      </h1>
+      <p style="color:rgba(255,255,255,.65);font-size:1.05rem;max-width:680px;line-height:1.7">
+        Uma noite inesquecível de forró, comidas típicas e muita alegria para reunir famílias
+        e amigos numa festa cheia de fé e paz!
+      </p>
+
+      <div class="infos-grid" role="list">
+
+        <div class="info-card" role="listitem">
+          <span class="ic-icon" aria-hidden="true">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#f5c518" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+          </span>
+          <h3>Data</h3>
+          <p>04 de Julho de 2026</p>
+          <p class="sub">Sexta-feira</p>
+        </div>
+
+        <div class="info-card" role="listitem">
+          <span class="ic-icon" aria-hidden="true">🕓</span>
+          <h3>Horário</h3>
+          <p>A partir das 16h</p>
+          <p class="sub">Até meia-noite</p>
+        </div>
+
+        <div class="info-card" role="listitem">
+          <span class="ic-icon" aria-hidden="true">📍</span>
+          <h3>Local</h3>
+          <p>Sales Multieventos</p>
+          <p class="sub">Aracaju – SE</p>
+        </div>
+
+        <div class="info-card" role="listitem">
+          <span class="ic-icon" aria-hidden="true">🌽</span>
+          <h3>Entrada</h3>
+          <p>Franca</p>
+          <p class="sub" style="line-height: 1.4;">
+            1kg de Alimentos Não Perecível que será direcionado para o Projeto Shalom Amigo dos Pobres.
+          </p>
+
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.1);">
+            <p class="sub" style="line-height: 1.3; margin-bottom: 12px; font-size: 0.8rem; margin-top: 0;">
+              Para uma melhor comodidade e experiência, garanta seu ingresso!
+            </p>
+            <button class="btn-cta" onclick="irParaPlanos()"
+              style="font-size: 0.85rem; padding: 8px 16px; width: 100%;">
+              👉 Participe do Evento
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Participe do Evento ── -->
+    <div class="section-full">
+      <div class="inner">
+        <section aria-labelledby="sec-participe-titulo">
+          <span class="section-tag">🎟️ Ingressos</span>
+          <h2 class="section-title" id="sec-participe-titulo">
+            Participe do <em>Evento</em>
+          </h2>
+          <p style="color:rgba(255,255,255,.65);font-size:1.05rem;max-width:640px;line-height:1.7;margin-bottom:36px;">
+            Escolha a forma de participação que mais combina com você!
+          </p>
+
+          <div class="participe-cards-grid">
+
+            <!-- Entrada Solidária -->
+            <div class="participe-card participe-solidaria" role="article">
+              <span class="participe-icon">🌽</span>
+              <h4>Entrada Solidária</h4>
+              <p>1kg de Alimento Não Perecível direcionado ao <strong>Projeto Shalom Amigo dos Pobres</strong></p>
+              <strong class="participe-preco" style="color:var(--verde);">Gratuito</strong>
+            </div>
+
+            <!-- Área Reservada Individual -->
+            <div class="participe-card participe-individual" role="article">
+              <div class="participe-urgencia">⚡ Cadeiras Limitadas!</div>
+              <span class="participe-icon">🎟️</span>
+              <h4>Área Reservada Individual</h4>
+              <p>Cadeira com seu nome reservada para o evento</p>
+              <strong class="participe-preco">R$ 30,00</strong>
+            </div>
+
+            <!-- Lounge do Arraiá -->
+            <div class="participe-card participe-lounge" role="article">
+              <div class="participe-urgencia">⚡ Mesas Limitadas!</div>
+              <span class="participe-icon">🪑</span>
+              <h4>Lounge do Arraiá</h4>
+              <p>Mesa exclusiva no lounge VIP para você e seus convidados</p>
+              <strong class="participe-preco">R$ 129,90</strong>
+            </div>
+
+          </div>
+
+          <div style="text-align:center;margin-top:40px;">
+            <button class="btn-cta" onclick="irParaPlanos()" id="ctaParticipe"
+              style="font-size:1.05rem;padding:16px 48px;">
+              🎉 Participe do Evento
+            </button>
+          </div>
+
+        </section>
+      </div>
+    </div>
+
+    <!-- ── Atrações ── -->
+    <div class="section-full">
+      <div class="inner">
+        <section aria-labelledby="sec-atracoes-titulo">
+          <span class="section-tag">🎸 Atrações</span>
+          <h2 class="section-title" id="sec-atracoes-titulo">
+            Quem vai <em>animar</em>?
+          </h2>
+
+          <!-- Carrossel -->
+          <div class="carousel-wrap" role="region" aria-label="Carrossel de atrações">
+
+            <button class="carousel-arrow prev" onclick="carouselMove(-1)" aria-label="Atração anterior">‹</button>
+            <button class="carousel-arrow next" onclick="carouselMove(1)" aria-label="Próxima atração">›</button>
+
+            <div class="carousel-track" id="carouselTrack">
+
+              <!-- Slide 1 -->
+              <div class="carousel-slide">
+                <div class="carousel-slide-inner">
+                  <div class="carousel-bg"
+                    style="background-image:url('assets/atração1.jpeg'); background-color:#0a1428;"></div>
+                  <div class="carousel-content">
+                    <span class="tag">🎤 Show Principal</span>
+                    <h3>Forró Brasa Viva</h3>
+                    <p>O melhor do forró autêntico do Nordeste, com muita energia e animação para a noite toda!</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slide 2 -->
+              <div class="carousel-slide">
+                <div class="carousel-slide-inner">
+                  <div class="carousel-bg"
+                    style="background-image:url('assets/atração2.jpeg'); background-color:#0a1428; background-position: center 15%;">
+                  </div>
+                  <div class="carousel-img-wrap" style="bottom:0; right:4%; width:42%; max-width:360px;">
+                    <img src="assets/atração2.jpeg" alt="Cléber Silva"
+                      style="max-height:480px; width:100%; object-fit:contain; object-position:center top;">
+                  </div>
+                  <div class="carousel-content">
+                    <span class="tag">🎸 Especial</span>
+                    <h3>Cléber Silva</h3>
+                    <p>Um dos grandes nomes do forró sergipano traz seu talento único para o Arraiá da Paz!</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slide 3 -->
+              <div class="carousel-slide">
+                <div class="carousel-slide-inner">
+                  <div class="carousel-bg"
+                    style="background-image:url('assets/atração3.jpeg'); background-color:#0a1428;"></div>
+                  <div class="carousel-content">
+                    <span class="tag">🎶 Música Ao Vivo</span>
+                    <h3>Trio Forró &amp; Brasa</h3>
+                    <p>Ritmo contagiante e levada garantida. Trio que faz todo mundo dançar até o amanhecer!</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slide 4 -->
+              <div class="carousel-slide">
+                <div class="carousel-slide-inner">
+                  <div class="carousel-bg"
+                    style="background-image:url('assets/atração4.jpeg'); background-color:#0a1428;"></div>
+                  <div class="carousel-content">
+                    <span class="tag">💃 Concurso</span>
+                    <h3>Concurso de Quadrilhas Cristãs</h3>
+                    <p>1º Concurso de Quadrilhas Cristãs do Estado de Sergipe — uma apresentação inesquecível!</p>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /carousel-track -->
+
+            <!-- Dots -->
+            <div class="carousel-dots atracoes-dots" role="tablist" aria-label="Slides do carrossel">
+              <button class="carousel-dot active" onclick="carouselGo(0)" role="tab" aria-selected="true"
+                aria-label="Slide 1"></button>
+              <button class="carousel-dot" onclick="carouselGo(1)" role="tab" aria-selected="false"
+                aria-label="Slide 2"></button>
+              <button class="carousel-dot" onclick="carouselGo(2)" role="tab" aria-selected="false"
+                aria-label="Slide 3"></button>
+              <button class="carousel-dot" onclick="carouselGo(3)" role="tab" aria-selected="false"
+                aria-label="Slide 4"></button>
+            </div>
+
+          </div><!-- /carousel-wrap -->
+
+          <!-- Pills adicionais -->
+          <div class="atracoes-pills-row" role="list" aria-label="Outras atrações">
+            <div class="atracao-pill" role="listitem"><span class="dot" aria-hidden="true"></span>Barraquinhas Típicas
+            </div>
+            <div class="atracao-pill" role="listitem"><span class="dot" aria-hidden="true"></span>Fotos Temáticas</div>
+            <div class="atracao-pill" role="listitem"><span class="dot" aria-hidden="true"></span>Brincadeiras Juninas
+            </div>
+            <div class="atracao-pill" role="listitem"><span class="dot" aria-hidden="true"></span>Comidas Nordestinas
+            </div>
+            <div class="atracao-pill" role="listitem"><span class="dot" aria-hidden="true"></span>Sorteios e Prêmios
+            </div>
+          </div>
+
+          <div class="badge-franca" aria-label="Informação sobre entrada">
+            🌽 Entrada Franca · 1kg de Alimento para o Projeto Shalom Amigo dos Pobres
+          </div>
+
+        </section>
+      </div>
+    </div>
+
+    <!-- ── Localização ── -->
+    <section aria-labelledby="sec-local-titulo">
+      <span class="section-tag">📍 Onde Vai Ser</span>
+      <h2 class="section-title" id="sec-local-titulo">
+        <em>Localização</em> do Evento
+      </h2>
+
+      <div class="local-card">
+        <div class="local-info">
+          <h3>Sales Multieventos</h3>
+          <address>
+            Av. Rio de Janeiro, 2500<br>
+            Ponto Novo – Aracaju, SE
+          </address>
+          <p class="local-tel">📞 Reservas: <a href="tel:+557999969-5288">(79) 99969-5288</a></p>
+          <a class="btn-maps" href="https://maps.google.com/?q=Sales+Multieventos+Aracaju+Av.+Rio+de+Janeiro+2500"
+            target="_blank" rel="noopener noreferrer" aria-label="Abrir localização no Google Maps">
+            🗺️ Ver no Google Maps
+          </a>
+        </div>
+        <div class="local-map" aria-label="Mapa de localização">
+          <iframe title="Mapa do Sales Multieventos – Aracaju SE"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3924.4!2d-37.0731!3d-10.9472!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sSales+Multieventos%2C+Aracaju!5e0!3m2!1spt-BR!2sbr!4v1700000000001"
+            loading="lazy" allowfullscreen></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Realização ── -->
+    <div class="section-full realizacao-section">
+      <div class="inner">
+        <section aria-labelledby="sec-realizacao-titulo">
+          <span class="section-tag">🌟 Organização</span>
+          <h2 class="section-title" id="sec-realizacao-titulo">
+            <em>Realização</em>
+          </h2>
+
+          <!-- Carrossel de Realização -->
+          <div class="carousel-realizacao-wrap" role="region" aria-label="Carrossel de realizadores">
+
+            <button class="carousel-arrow prev" onclick="realizacaoMove(-1)" aria-label="Realizador anterior">‹</button>
+            <button class="carousel-arrow next" onclick="realizacaoMove(1)" aria-label="Próximo realizador">›</button>
+
+            <div class="carousel-realizacao-track" id="realizacaoTrack">
+
+              <!-- Slide 1 — Prefeitura Aracaju + FUNCAJU -->
+              <div class="realizacao-slide">
+                <div class="realizacao-slide-inner">
+                  <div class="realizacao-banner" style="background-image: url('assets/realizacao1.jpg');"></div>
+                  <div class="realizacao-overlay" aria-hidden="true"></div>
+                </div>
+              </div>
+
+              <!-- Slide 2 — Comunidade Shalom -->
+              <div class="realizacao-slide">
+                <div class="realizacao-slide-inner">
+                  <div class="realizacao-banner" style="background-image: url('assets/realizacao2.jpg');"></div>
+                  <div class="realizacao-overlay" aria-hidden="true"></div>
+                </div>
+              </div>
+
+              <!-- Slide 3 — LIQUAJUSE -->
+              <div class="realizacao-slide">
+                <div class="realizacao-slide-inner">
+                  <div class="realizacao-banner" style="background-image: url('assets/realizacao3.jpg');"></div>
+                  <div class="realizacao-overlay" aria-hidden="true"></div>
+                </div>
+              </div>
+
+            </div><!-- /realizacao-track -->
+
+            <!-- Dots -->
+            <div class="carousel-dots realizacao-dots" role="tablist" aria-label="Slides de realização">
+              <button class="carousel-dot active" onclick="realizacaoGo(0)" role="tab" aria-selected="true"
+                aria-label="Slide 1"></button>
+              <button class="carousel-dot" onclick="realizacaoGo(1)" role="tab" aria-selected="false"
+                aria-label="Slide 2"></button>
+              <button class="carousel-dot" onclick="realizacaoGo(2)" role="tab" aria-selected="false"
+                aria-label="Slide 3"></button>
+            </div>
+
+          </div><!-- /carousel-realizacao-wrap -->
+
+        </section>
+      </div>
+    </div>
+
+    <!-- ── CTA Final ── -->
+    <div class="section-full">
+      <div class="inner">
+        <section aria-labelledby="sec-cta-titulo">
+          <div class="cta-final">
+            <div class="badge-vagas" role="status" aria-live="polite">⚡ Vagas Limitadas!</div>
+            <h2 id="sec-cta-titulo">Garanta seu <em>Ingresso!</em></h2>
+            <p>
+              Escolha sua modalidade de participação e garante sua vaga agora!<br>
+              Cadeiras e mesas com vagas limitadas.
+            </p>
+            <button class="btn-cta" onclick="irParaPlanos()" id="ctaFinal">
+              🎉 Participe do Evento
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer role="contentinfo">
+      <p>
+        © 2026 <strong>Arraiá da Paz</strong> · Todos os direitos reservados ·
+        Desenvolvido com 💛 pela equipe da <strong>Comunidade Shalom</strong>
+      </p>
+    </footer>
+
+  </div><!-- /#p1 -->
+
+
+  <!-- ══════════════════════════════════════
+     PÁGINA 2 — PLANOS / VALORES
+══════════════════════════════════════ -->
+  <div class="page" id="p2">
+    <div class="planos-page">
+      <div class="planos-container">
+
+        <div class="planos-header">
+          <span class="section-tag">🎟️ Ingressos</span>
+          <h1 class="section-title" style="margin-bottom:16px;">Escolha sua <em>Participação</em></h1>
+          <p style="color:rgba(255,255,255,.65);font-size:1rem;max-width:600px;margin:0 auto 32px;line-height:1.7;">
+            Selecione a opção ideal para você e garanta seu lugar no maior Arraiá da Paz de Sergipe!
+          </p>
+          <div class="alerta-lote" role="alert" aria-live="polite">
+            ⚠️ Aproveite antes da virada do lote!
+          </div>
+        </div>
+
+        <div class="planos-grid">
+
+          <!-- Card 1: Entrada Solidária -->
+          <div class="plano-card plano-solidaria">
+            <div class="plano-badge">🌽 Gratuito</div>
+            <span class="plano-icon">🌾</span>
+            <h3>Entrada Solidária</h3>
+            <div class="plano-preco">
+              <span class="preco-valor" style="font-size:2.2rem;color:var(--verde);">1kg</span>
+              <span class="preco-descricao">de Alimento<br>Não Perecível</span>
+            </div>
+            <p class="plano-detalhe">
+              Sua contribuição será direcionada integralmente para o
+              <strong>Projeto Shalom Amigo dos Pobres</strong>. Uma entrada repleta de solidariedade!
+            </p>
+            <button class="btn-plano" onclick="irParaFormulario('solidaria')" id="btnSolidaria">
+              Quero Participar →
+            </button>
+          </div>
+
+          <!-- Card 2: Área Reservada Individual -->
+          <div class="plano-card plano-individual plano-destaque">
+            <div class="plano-badge plano-badge-urgencia">⚡ Cadeiras Limitadas!</div>
+            <span class="plano-icon">🎟️</span>
+            <h3>Área Reservada Individual</h3>
+            <div class="plano-preco">
+              <span class="preco-prefixo">R$</span>
+              <span class="preco-valor">30</span>
+              <span class="preco-centavos">,00</span>
+            </div>
+            <p class="plano-detalhe">
+              Cadeira reservada com seu nome. Conforto e exclusividade para aproveitar
+              cada momento do evento!
+            </p>
+            <button class="btn-plano btn-plano-destaque" onclick="irParaFormulario('individual')" id="btnIndividual">
+              Adquirir Já →
+            </button>
+          </div>
+
+          <!-- Card 3: Lounge do Arraiá -->
+          <div class="plano-card plano-lounge">
+            <div class="plano-badge plano-badge-urgencia">⚡ Mesas Limitadas!</div>
+            <span class="plano-icon">🪑</span>
+            <h3>Lounge do Arraiá</h3>
+            <div class="plano-preco">
+              <span class="preco-prefixo" style="color:#c39bd3;">R$</span>
+              <span class="preco-valor" style="color:#c39bd3;">129</span>
+              <span class="preco-centavos" style="color:#c39bd3;">,90</span>
+            </div>
+            <p class="plano-detalhe">
+              Mesa exclusiva no lounge VIP. A melhor experiência do Arraiá da Paz
+              para você e seus convidados!
+            </p>
+            <button class="btn-plano btn-plano-premium" onclick="irParaFormulario('lounge')" id="btnLounge">
+              Adquirir Já →
+            </button>
+          </div>
+
+        </div><!-- /.planos-grid -->
+
+      </div><!-- /.planos-container -->
+    </div><!-- /.planos-page -->
+  </div><!-- /#p2 -->
+
+
+  <!-- ══════════════════════════════════════
+     PÁGINA 3 — FORMULÁRIO DE INSCRIÇÃO
+══════════════════════════════════════ -->
+  <div class="page" id="p3">
+    <div class="form-page">
+      <div class="form-container" role="main" id="formContainer">
+
+        <!-- Cabeçalho do formulário -->
+        <header class="form-header">
+          <span class="badge-vagas-mini" id="formBadge">⚡ Vagas Limitadas</span>
+          <h1 id="formTitulo">🪗 Reserve seu Lugar</h1>
+          <p id="formSubtitulo">Preencha os dados abaixo · Rápido e seguro</p>
+        </header>
+
+        <!-- Indicador de steps (exibido apenas no Fluxo B) -->
+        <div class="steps-wrap" id="stepsWrap" role="tablist" aria-label="Etapas do formulário">
+          <div class="step-ind active" id="si1" role="tab" aria-selected="true">
+            <span class="snum">1</span> Dados
+          </div>
+          <div class="step-ind" id="si2" role="tab" aria-selected="false">
+            <span class="snum">2</span> Particip.
+          </div>
+          <div class="step-ind" id="si3" role="tab" aria-selected="false">
+            <span class="snum">3</span> Pagamento
+          </div>
+        </div>
+
+        <!-- Corpo do formulário -->
+        <div class="form-body" id="formBody">
+
+          <!-- ── STEP 1: Dados Pessoais ── -->
+          <div class="step-view active" id="sv1" role="tabpanel" aria-labelledby="si1">
+
+            <div class="fg">
+              <label for="f_nome">Nome Completo</label>
+              <input type="text" id="f_nome" placeholder="Seu nome completo" autocomplete="name">
+            </div>
+
+            <div class="fg">
+              <label for="f_tel">Telefone / WhatsApp</label>
+              <input type="tel" id="f_tel" placeholder="(79) 99999-9999" autocomplete="tel" inputmode="numeric"
+                maxlength="15">
+            </div>
+
+            <div class="fg">
+              <label for="f_endereco">Endereço</label>
+              <input type="text" id="f_endereco" placeholder="Rua, número, bairro, cidade">
+            </div>
+
+            <!-- E-mail: visível apenas no Fluxo B -->
+            <div class="fg" id="emailGroup">
+              <label for="f_email">E-mail</label>
+              <input type="email" id="f_email" placeholder="seu@email.com" autocomplete="email">
+            </div>
+
+            <!-- Botão Fluxo A: submit direto -->
+            <button class="btn-primary hidden" id="btnStep1A" onclick="submitFluxoA()">
+              ✅ Confirmar Inscrição
+            </button>
+
+            <!-- Botão Fluxo B: vai para step 2 -->
+            <button class="btn-primary" id="btnStep1B" onclick="irSv2()">
+              Próximo → Participação
+            </button>
+
+            <button class="btn-ghost" onclick="voltarPlanos()">← Voltar</button>
+
+          </div><!-- /#sv1 -->
+
+
+          <!-- ── STEP 2: Participação (Fluxo B) ── -->
+          <div class="step-view" id="sv2" role="tabpanel" aria-labelledby="si2">
+
+            <div class="fg">
+              <label>Você é do Shalom?</label>
+              <div class="radio-group" role="radiogroup" aria-label="Pertence à comunidade">
+                <label class="radio-btn" id="rbSim">
+                  <input type="radio" name="comunidade" value="sim" onchange="selecionarCom(true)">
+                  <span class="radio-dot"></span> ✅ Sim
+                </label>
+                <label class="radio-btn" id="rbNao">
+                  <input type="radio" name="comunidade" value="nao" onchange="selecionarCom(false)">
+                  <span class="radio-dot"></span> ❌ Não
+                </label>
+              </div>
+            </div>
+
+            <!-- Campo condicional: só aparece se "Não" -->
+            <div class="fg cond-field" id="condIndicacao">
+              <label for="f_indicacao">Quem te indicou?</label>
+              <input type="text" id="f_indicacao" placeholder="Nome de quem te convidou">
+            </div>
+
+            <button class="btn-primary" onclick="irSv3()" id="btnStep2">
+              Próximo → Pagamento
+            </button>
+            <button class="btn-ghost" onclick="irSv(1)">← Voltar</button>
+
+          </div><!-- /#sv2 -->
+
+
+          <!-- ── STEP 3: Pagamento (Fluxo B) ── -->
+          <div class="step-view" id="sv3" role="tabpanel" aria-labelledby="si3">
+
+            <p class="step-desc">Escolha como prefere pagar:</p>
+
+            <div class="pag-opcoes" role="group" aria-label="Método de pagamento">
+
+              <div class="pag-card" id="pixCard" onclick="selecionarPag('pix')" role="button" tabindex="0"
+                aria-pressed="false">
+                <span class="pag-ico" aria-hidden="true">💚</span>
+                <h4>Pix</h4>
+                <p>Instantâneo · Sem taxa</p>
+              </div>
+
+              <div class="pag-card" id="cartaoCard" onclick="selecionarPag('cartao')" role="button" tabindex="0"
+                aria-pressed="false">
+                <span class="pag-ico" aria-hidden="true">💳</span>
+                <h4>Cartão</h4>
+                <p>Crédito · Débito</p>
+              </div>
+
+            </div>
+
+
+            <!-- Painel PIX -->
+            <div class="pag-detail" id="pdPix">
+              <div class="pix-box">
+                <div class="pix-box-header">
+                  <span class="pix-icon-grande" aria-hidden="true">💚</span>
+                  <div>
+                    <h4>Pague com Pix</h4>
+                    <p class="pix-box-sub">Rápido, instantâneo e sem taxas</p>
+                  </div>
+                </div>
+
+                <!-- Valor dinâmico -->
+                <div class="pix-valor-wrap" id="pixValorWrap">
+                  <span class="pix-valor-label">Valor a pagar:</span>
+                  <span class="pix-valor-num" id="pixValorNum">—</span>
+                </div>
+
+                <!-- Chave Pix -->
+                <p class="pix-chave-titulo">Chave Pix (E-mail):</p>
+                <div class="pix-key-display" id="pixKeyDisplay" aria-label="Chave Pix para pagamento">
+                  nossacasanossochao@comshalom.org
+                </div>
+                <button class="btn-copy" onclick="copiarChavePix()" id="btnCopiarPix" aria-label="Copiar chave Pix">
+                  📋 Copiar chave Pix
+                </button>
+                <p class="pix-obs">Após o pagamento, envie o comprovante via WhatsApp para confirmar sua vaga.</p>
+              </div>
+            </div>
+
+            <!-- Painel CARTÃO -->
+            <div class="pag-detail" id="pdCartao">
+              <div class="cartao-box">
+                <div class="cartao-box-header">
+                  <span class="cartao-icon-grande" aria-hidden="true">💳</span>
+                  <div>
+                    <h4>Pague com Cartão</h4>
+                    <p class="cartao-box-sub">Crédito ou Débito · Checkout Seguro</p>
+                  </div>
+                </div>
+
+                <!-- Valor dinâmico -->
+                <div class="pix-valor-wrap" id="cartaoValorWrap">
+                  <span class="pix-valor-label">Valor a pagar:</span>
+                  <span class="pix-valor-num cartao-valor-num" id="cartaoValorNum">—</span>
+                </div>
+
+                <div class="cartao-info-row">
+                  <span class="cartao-info-item">🔒 Ambiente seguro</span>
+                  <span class="cartao-info-item">⚡ Confirmação imediata</span>
+                  <span class="cartao-info-item">🏦 Processado pela Cielo</span>
+                </div>
+
+                <p class="cartao-obs">
+                  Você será redirecionado ao checkout seguro da <strong>Cielo</strong> para concluir o pagamento.
+                </p>
+              </div>
+            </div>
+
+
+            <!-- LGPD — apenas no Fluxo B -->
+            <div class="lgpd-consent" id="lgpdConsent">
+              <label class="lgpd-label">
+                <input type="checkbox" id="chkLGPD" onchange="toggleLGPD()" aria-required="true">
+                <span>
+                  Li e concordo com o tratamento dos meus dados pessoais (nome, e-mail, telefone)
+                  para fins de inscrição e contato referentes ao Arraiá da Paz 2026,
+                  conforme a <strong>LGPD (Lei 13.709/2018)</strong>.
+                </span>
+              </label>
+            </div>
+
+            <br>
+            <button class="btn-primary" id="btnFinalizar" onclick="finalizar()" disabled aria-disabled="true">
+              🎉 Finalizar Inscrição
+            </button>
+            <button class="btn-ghost" onclick="irSv(2)">← Voltar</button>
+
+          </div><!-- /#sv3 -->
+
+        </div><!-- /.form-body -->
+
+        <!-- ── TELA DE SUCESSO ── -->
+        <div class="success-view" id="successView" role="alert" aria-live="assertive">
+          <span class="success-big" aria-hidden="true">🎉</span>
+          <h2>Inscrição Confirmada!</h2>
+          <div id="successContent" style="margin-bottom:16px;"></div>
+          <strong class="success-data">📅 04 de Julho · Sales Multieventos · 16h</strong>
+          <br><br>
+          <span class="success-obs">
+            Leve 1kg de alimento não perecível · Entrada franca
+          </span>
+          <br><br>
+          <button onclick="voltarLanding()" class="btn-primary btn-voltar-sucesso" id="btnVoltarSucesso">
+            ← Voltar ao site
+          </button>
+        </div>
+
+      </div><!-- /.form-container -->
+    </div><!-- /.form-page -->
+  </div><!-- /#p3 -->
+
+
+</body>
+
+</html>

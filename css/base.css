@@ -1,0 +1,93 @@
+/* ============================================================
+   BASE — Reset, tipografia e layout global
+   ============================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-corpo);
+  background: var(--azul-escuro);
+  color: #fff;
+  overflow-x: hidden;
+}
+
+/* ── PAGE TRANSITION ── */
+.page {
+  display: none;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.page.active {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── SECTION BASE ── */
+section { padding: 64px 24px; max-width: 1100px; margin: 0 auto; }
+.section-full { padding: 64px 24px; background: rgba(0,0,0,.2); }
+.section-full > .inner { max-width: 1100px; margin: 0 auto; }
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(245,197,24,.12);
+  border: 1px solid rgba(245,197,24,.3);
+  color: var(--amarelo);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 50px;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--font-titulo);
+  font-size: clamp(2rem, 4.5vw, 3.2rem);
+  line-height: 1.1;
+  margin-bottom: 8px;
+  color: #fff;
+}
+.section-title em { color: var(--amarelo); font-style: normal; }
+
+/* ── UTILITY ── */
+/* Controle de visibilidade via classe (CSS-first, sem inline style) */
+.hidden { display: none !important; }
+
+/* ── CARTÃO DE PAGAMENTO ── */
+.cartao-info-box {
+  background: rgba(92, 124, 250, .1);
+  border: 1.5px solid rgba(92, 124, 250, .35);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+.cartao-titulo {
+  color: #a5b4fc;
+  font-size: .95rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.cartao-desc {
+  color: rgba(255, 255, 255, .55);
+  font-size: .85rem;
+  line-height: 1.6;
+}
+
+/* ── TELA DE SUCESSO ── */
+.success-data { color: var(--amarelo); }
+.success-obs  { color: rgba(255, 255, 255, .4); font-size: .85rem; }
+.btn-voltar-sucesso {
+  margin-top: 32px;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
