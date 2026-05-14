@@ -2,15 +2,9 @@
 
 let paginaAtual = 'p1'; // 'p1' | 'p2' | 'p3'
 
-/** p1 → p2 (Planos/Valores) */
+/** Redireciona para o novo link de evento */
 function irParaPlanos() {
-  document.getElementById('p1').classList.remove('active');
-  setTimeout(() => {
-    document.getElementById('p2').classList.add('active');
-    document.getElementById('btnBack').classList.add('show');
-    window.scrollTo(0, 0);
-  }, 50);
-  paginaAtual = 'p2';
+  window.location.href = 'https://evento.agendacatolica.com/arraia-da-paz-aracaju-2026';
 }
 
 /** p2 → p3 (Formulário) com tipo de ingresso pré-definido */
