@@ -55,7 +55,7 @@
 ───────────────────────────────────────────────────────────── */
 (function () {
   let curR  = 0;
-  const totalR = 3;
+  const totalR = 7;
   let timerR;
 
   /** Atualiza posição e dots do carrossel de realização. */
